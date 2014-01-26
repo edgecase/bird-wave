@@ -1,65 +1,60 @@
 (ns bird-man.import
- (:require [clojure.string :as cs]
-           [clojure.java.io :as io]))
+  (:require [clojure.string :as cs]
+            [clojure.java.io :as io]))
 
 (def fields
-  [
-   :sighting/guid true ;;  "GLOBAL UNIQUE IDENTIFIER"
-   :a01 false;;  "TAXONOMIC ORDER"
-   :a02 false;;  "CATEGORY"
-   :sighting/common-name true ;;  "COMMON NAME"
-   :a03 false;;  "SCIENTIFIC NAME"
-   :sighting/subspecies-common-name true ;;  "SUBSPECIES COMMON NAME"
-   :a04 false;;  "SUBSPECIES SCIENTIFIC NAME"
-   :sighting/count true ;;  "OBSERVATION COUNT" ;; x indicates uncounted
-   :a05 false;;  "BREEDING BIRD ATLAS CODE"
-   :a06 false;;  "AGE/SEX"
-   :a07 false;;  "COUNTRY"
-   :a08 false;;  "COUNTRY_CODE"
-   :sighting/state true ;;  "STATE_PROVINCE"
-   :sighting/state-code true ;;  "SUBNATIONAL1_CODE"
-   :sighting/county true ;;  "COUNTY"
-   :sighting/county-code true ;;  "SUBNATIONAL2_CODE"
-   :a09 false;;  "IBA CODE"
-   :sighting/locality true ;;  "LOCALITY"
-   :a10 false;;  "LOCALITY ID"
-   :a11 false;;  "LOCALITY TYPE"
-   :sighting/latitude true ;;  "LATITUDE"
-   :sighting/longitude true ;;  "LONGITUDE"
-   :sighting/date true ;;  "OBSERVATION DATE"
-   :a12 false;;  "TIME OBSERVATIONS STARTED"
-   :a13 false;;  "TRIP COMMENTS"
-   :a14 false;;  "SPECIES COMMENTS"
-   :a15 false;;  "OBSERVER ID"
-   :a16 false;;  "FIRST NAME"
-   :a17 false;;  "LAST NAME"
-   :sighting/event-id true ;;  "SAMPLING EVENT IDENTIFIER"
-   :a18 false;;  "PROTOCOL TYPE"
-   :a19 false;;  "PROJECT CODE"
-   :a20 false;;  "DURATION MINUTES"
-   :a21 false;;  "EFFORT DISTANCE KM"
-   :a22 false;;  "EFFORT AREA HA"
-   :a23 false;;  "NUMBER OBSERVERS"
-   :a24 false;;  "ALL SPECIES REPORTED"
-   :a25 false;;  "GROUP IDENTIFIER"
-   :a26 false;;  "APPROVED"
-   :a27 false;;  "REVIEWED"
-   :a28 false;;  "REASON"
+  [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
+   nil                              ;; "TAXONOMIC ORDER"
+   nil                              ;; "CATEGORY"
+   :sighting/common-name            ;; "COMMON NAME"
+   nil                              ;; "SCIENTIFIC NAME"
+   :sighting/subspecies-common-name ;; "SUBSPECIES COMMON NAME"
+   nil                              ;; "SUBSPECIES SCIENTIFIC NAME"
+   :sighting/count                  ;; "OBSERVATION COUNT" ;; x indicates uncounted
+   nil                              ;; "BREEDING BIRD ATLAS CODE"
+   nil                              ;; "AGE/SEX"
+   nil                              ;; "COUNTRY"
+   nil                              ;; "COUNTRY_CODE"
+   :sighting/state                  ;; "STATE_PROVINCE"
+   :sighting/state-code             ;; "SUBNATIONAL1_CODE"
+   :sighting/county                 ;; "COUNTY"
+   :sighting/county-code            ;; "SUBNATIONAL2_CODE"
+   nil                              ;; "IBA CODE"
+   :sighting/locality               ;; "LOCALITY"
+   nil                              ;; "LOCALITY ID"
+   nil                              ;; "LOCALITY TYPE"
+   :sighting/latitude               ;; "LATITUDE"
+   :sighting/longitude              ;; "LONGITUDE"
+   :sighting/date                   ;; "OBSERVATION DATE"
+   nil                              ;; "TIME OBSERVATIONS STARTED"
+   nil                              ;; "TRIP COMMENTS"
+   nil                              ;; "SPECIES COMMENTS"
+   nil                              ;; "OBSERVER ID"
+   nil                              ;; "FIRST NAME"
+   nil                              ;; "LAST NAME"
+   :sighting/event-id               ;; "SAMPLING EVENT IDENTIFIER"
+   nil                              ;; "PROTOCOL TYPE"
+   nil                              ;; "PROJECT CODE"
+   nil                              ;; "DURATION MINUTES"
+   nil                              ;; "EFFORT DISTANCE KM"
+   nil                              ;; "EFFORT AREA HA"
+   nil                              ;; "NUMBER OBSERVERS"
+   nil                              ;; "ALL SPECIES REPORTED"
+   nil                              ;; "GROUP IDENTIFIER"
+   nil                              ;; "APPROVED"
+   nil                              ;; "REVIEWED"
+   nil                              ;; "REASON"
    ])
-
-(defn sighting-fields [[key include?] val]
-  (if include?
-    [key val] nil)
-)
 
 (defn sighting [plaintext-row]
   (into {}
         (filter (complement nil?)
-                (map sighting-fields
-                     (partition 2 fields)
+                (map #(if % [% %2])
+                     fields
                      (cs/split plaintext-row #"\t")))))
 
 (defn sighting-seq [filename]
   (map sighting (drop 1 (line-seq (io/reader filename)))))
 
-(take 1 (sighting-seq "/Users/bestra/Downloads/ebird.txt"))
+(comment
+  (take 1 (sighting-seq "/Users/bestra/Downloads/ebird.txt")))
