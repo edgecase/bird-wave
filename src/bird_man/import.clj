@@ -1,6 +1,7 @@
 (ns bird-man.import
   (:require [clojure.string :as cs]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.instant :as inst]))
 
 (def fields
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
@@ -58,3 +59,18 @@
 
 (comment
   (take 1 (sighting-seq "/Users/bestra/Downloads/ebird.txt")))
+
+(defn coerce [m f & [key & keys]]
+  (if key
+    (recur (assoc m key (f (get m key))) f keys)
+    m))
+
+(defn sighting-seed [sighting]
+  (-> sighting
+      (coerce #(bigdec %)
+              :sighting/latitude
+              :sighting/longitude)
+      (coerce #(inst/read-instant-date %)
+              :sighting/date)
+      (coerce #(Long/parseLong %)
+              :sighting/count)))
