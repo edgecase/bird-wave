@@ -4,8 +4,9 @@
 
 (defn seed-rows [conn batch-size]
   (doseq [batch (partition-all batch-size import/sample-seed-data)]
-    (prn (str "commiting " (count batch) " records"))
-    (d/transact conn batch)))
+    (pr (str "commiting " (count batch) " records..."))
+    (d/transact conn batch)
+    (prn "done.")))
 
 (defn init
   "Creates the datomic database and loads seed data"
