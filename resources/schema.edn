@@ -1,17 +1,10 @@
 [
 ;;sightings
  {
-  :db/ident :sighting/id
-  :db/valueType :db.type/uuid
-  :db/cardinality :db.cardinality/one
-  :db/unique :db.unique/identity
-  :db/id #db/id[:db.part/db]
-  :db.install/_attribute :db.part/db}
-
- {
   :db/ident :sighting/guid
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
+  :db/unique :db.unique/identity
   :db/id #db/id[:db.part/db]
   :db.install/_attribute :db.part/db}
 
