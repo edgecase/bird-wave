@@ -1,7 +1,8 @@
 (ns bird-man.import
   (:require [clojure.string :as cs]
             [clojure.java.io :as io]
-            [clojure.instant :as inst]))
+            [clojure.instant :as inst]
+            [datomic.api :as d]))
 
 (def fields
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
@@ -65,6 +66,7 @@
 
 (defn sighting-seed [sighting]
   (-> sighting
+      (assoc :db/id (d/tempid :db.part/user))
       (coerce #(bigdec %)
               :sighting/latitude
               :sighting/longitude)
