@@ -55,10 +55,8 @@
                      (cs/split plaintext-row #"\t")))))
 
 (defn sighting-seq [filename]
-  (map sighting (drop 1 (line-seq (io/reader filename)))))
-
-(comment
-  (take 1 (sighting-seq "/Users/bestra/Downloads/ebird.txt")))
+  (map sighting (take-while (complement nil?)
+                            (drop 1 (line-seq (io/reader filename))))))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -74,3 +72,6 @@
               :sighting/date)
       (coerce #(Long/parseLong %)
               :sighting/count)))
+
+(def sample-seed-data
+  (map sighting-seed (sighting-seq "resources/sample_data/birds.txt")))
