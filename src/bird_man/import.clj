@@ -1,7 +1,8 @@
 (ns bird-man.import
   (:require [clojure.string :as cs]
             [clojure.java.io :as io]
-            [clojure.instant :as inst]))
+            [clojure.instant :as inst]
+            [datomic.api :as d]))
 
 (def fields
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
@@ -55,10 +56,8 @@
                      (cs/split plaintext-row #"\t")))))
 
 (defn sighting-seq [filename]
-  (map sighting (drop 1 (line-seq (io/reader filename)))))
-
-(comment
-  (take 1 (sighting-seq "/Users/bestra/Downloads/ebird.txt")))
+  (map sighting (take-while (complement nil?)
+                            (drop 1 (line-seq (io/reader filename))))))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -67,6 +66,7 @@
 
 (defn sighting-seed [sighting]
   (-> sighting
+      (assoc :db/id (d/tempid :db.part/user))
       (coerce #(bigdec %)
               :sighting/latitude
               :sighting/longitude)
@@ -74,3 +74,6 @@
               :sighting/date)
       (coerce #(Long/parseLong %)
               :sighting/count)))
+
+(def sample-seed-data
+  (map sighting-seed (sighting-seq "resources/sample_data/birds.txt")))

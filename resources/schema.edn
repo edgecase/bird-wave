@@ -1,101 +1,94 @@
 [
 ;;sightings
  {
-  :db/ident :sighting/id
-  :db/valueType :db.type/uuid
-  :db/cardinality :db.cardinality/one
-  :db/unique :db.unique/identity
-  :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
-
- {
   :db/ident :sighting/guid
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
+  :db/unique :db.unique/identity
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/common-name
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/subspecies-common-name
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/count
   :db/valueType :db.type/long
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/state
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/state-code
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/county
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/county-code
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/locality
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/latitude
-  :db/valueType :db.type/bigDec
+  :db/valueType :db.type/bigdec
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/longitude
-  :db/valueType :db.type/bigDec
+  :db/valueType :db.type/bigdec
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/date
   :db/valueType :db.type/instant
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
 
  {
   :db/ident :sighting/event-id
   :db/valueType :db.type/string
   :db/cardinality :db.cardinality/one
   :db/id #db/id[:db.part/db]
-  :db/install/_attribute :db.part/db}
+  :db.install/_attribute :db.part/db}
  ]

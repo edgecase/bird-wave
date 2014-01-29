@@ -9,7 +9,8 @@
             [clojure.tools.namespace.repl :refer (refresh refresh-all)]
             [io.pedestal.service-tools.dev :as pedestal-dev]
             [datomic.api :as d :refer (db q)]
-            bird-man.service))
+            bird-man.service
+            bird-man.database))
 
 (defonce system (atom nil))
 
@@ -18,12 +19,10 @@
   #'system."
   []
   (let [url "datomic:mem://localhost/dev"
-        db-created? (d/create-database url)
-        conn (d/connect url)]
-  ;;  (when db-created?
-   ;;   (d/transact conn (read-string (slurp "resources/schema.edn")))
-    ;;  (d/transact conn (read-string (slurp "resources/seed.edn"))))
-    (reset! system (merge (pedestal-dev/init bird-man.service/service #'bird-man.service/routes)
+        conn (bird-man.database/init url)]
+    (reset! system (merge (pedestal-dev/init
+                           bird-man.service/service
+                           #'bird-man.service/routes)
                           {:db-url url :db-conn conn}))))
 
 (def conn (atom nil))
