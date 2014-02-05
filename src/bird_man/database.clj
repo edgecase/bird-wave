@@ -4,7 +4,6 @@
 
 (defn seed-rows [conn batch-size]
   (doseq [batch (partition-all batch-size import/sample-seed-data)]
-    (pr (str "commiting " (count batch) " records..."))
     (d/transact conn batch)
     (prn "done.")))
 
