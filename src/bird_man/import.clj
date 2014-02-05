@@ -5,7 +5,7 @@
             [datomic.api :as d]))
 
 (def fields
-  [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
+  [nil                              ;; "GLOBAL UNIQUE IDENTIFIER"
    nil                              ;; "TAXONOMIC ORDER"
    nil                              ;; "CATEGORY"
    :sighting/common-name            ;; "COMMON NAME"
@@ -34,7 +34,7 @@
    nil                              ;; "OBSERVER ID"
    nil                              ;; "FIRST NAME"
    nil                              ;; "LAST NAME"
-   :sighting/event-id               ;; "SAMPLING EVENT IDENTIFIER"
+   nil                              ;; "SAMPLING EVENT IDENTIFIER"
    nil                              ;; "PROTOCOL TYPE"
    nil                              ;; "PROJECT CODE"
    nil                              ;; "DURATION MINUTES"
