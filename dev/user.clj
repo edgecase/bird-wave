@@ -32,7 +32,7 @@
   []
   (reset! conn (:db-conn @system))
   (alter-var-root #'bird-man.service/datomic-connection
-                  (constantly (:db-conn @system)))
+                  (constantly @conn))
   (pedestal-dev/start))
 
 (defn stop
