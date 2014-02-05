@@ -64,6 +64,9 @@
     (recur (assoc m key (f (get m key))) f keys)
     m))
 
+(defn parse-count [s]
+  (if (= "X" s) 1 (Long/parseLong s)))
+
 (defn sighting-seed [sighting]
   (-> sighting
       (assoc :db/id (d/tempid :db.part/user))
@@ -72,7 +75,7 @@
               :sighting/longitude)
       (coerce #(inst/read-instant-date %)
               :sighting/date)
-      (coerce #(Long/parseLong %)
+      (coerce parse-count
               :sighting/count)))
 
 (def sample-seed-data

@@ -16,5 +16,5 @@
     (when db-created?
       (prn "db was created. reading schema")
       (d/transact conn (read-string (slurp "resources/schema.edn")))
-      (seed-rows conn 30)
+      (seed-rows conn 1000)
       conn)))
