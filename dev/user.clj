@@ -19,7 +19,7 @@
   #'system."
   []
   (let [url "datomic:mem://localhost/dev"
-        conn (bird-man.database/init url)]
+        conn (bird-man.database/init url false)]
     (reset! system (merge (pedestal-dev/init
                            bird-man.service/service
                            #'bird-man.service/routes)
