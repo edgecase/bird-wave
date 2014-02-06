@@ -23,9 +23,12 @@
 
 (defn species-index [{conn :datomic-conn :as request}]
   (ring-resp/response
-   (sort (map first (q '[:find ?name
-                         :where [_ :sighting/common-name ?name]]
-                       (db conn))))))
+   (map zipmap
+        (repeat [:name :count])
+        (d/q '[:find ?name (sum ?count)
+               :where [?e :sighting/common-name ?name]
+               [?e :sighting/count ?count]]
+             (d/db conn)))))
 
 (defroutes routes
   [[["/" {:get home-page}
