@@ -17,9 +17,9 @@
 (defn init
   "Creates and initializes the system under development in the Var
   #'system."
-  []
-  (let [url "datomic:mem://localhost/dev"
-        conn (bird-man.database/init url false)]
+  [create]
+  (let [url "datomic:sql://dev?jdbc:postgresql://localhost:5432/datomic?user=datomic&password=datomic"
+        conn (bird-man.database/init url create)]
     (reset! system (merge (pedestal-dev/init
                            bird-man.service/service
                            #'bird-man.service/routes)
@@ -45,10 +45,12 @@
 
 (defn go
   "Initializes and starts the system running."
-  []
-  (init)
+  ([]
+   (go true))
+  ([createdb]
+  (init createdb)
   (start)
-  :ready)
+  :ready))
 
 (defn reset
   "Stops the system, reloads modified source files, and restarts it."
