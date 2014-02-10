@@ -3,9 +3,10 @@
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
               [io.pedestal.service.http.route.definition :refer [defroutes]]
-              [io.pedestal.service.interceptor :refer [defon-request]]
+              [io.pedestal.service.interceptor :refer [defon-request defbefore defafter]]
               [io.pedestal.service.log :as log]
               [ring.util.response :as ring-resp]
+              [ring.util.codec :as ring-codec]
               [datomic.api :as d :refer (q db)]))
 
 (defn home-page
@@ -21,6 +22,14 @@
   "Add a conn reference to each request"
   add-datomic-conn)
 
+(defbefore log-request [context]
+  (log/info :request (:request context))
+  context)
+
+(defafter log-response [context]
+  (log/info :response (:response context))
+  context)
+
 (defn species-index [{conn :datomic-conn :as request}]
   (ring-resp/response
    (map zipmap
@@ -30,11 +39,25 @@
                [?e :sighting/count ?count]]
              (d/db conn)))))
 
+(defn countywise-frequencies [{conn :datomic-conn :as request}]
+  (ring-resp/response
+    (let [common-name (ring-codec/url-decode (get-in request [:path-params :common-name]))]
+      (d/q '[:find ?county ?state (sum ?count) (count ?e)
+           :in $ ?name
+           :where
+           [?e :sighting/common-name ?name]
+           [?e :sighting/state ?state]
+           [?e :sighting/count ?count]
+           [?e :sighting/county ?county]]
+         (d/db conn) common-name))))
+
 (defroutes routes
   [[["/" {:get home-page}
      ;; Set default interceptors for /about and any other paths under /
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/json-body]
-     ["/species" {:get species-index}]]]])
+     ["/species" {:get species-index}
+      ["/:common-name" {:get countywise-frequencies}
+       ^:interceptors [log-request log-response]]]]]])
 
 ;; Consumed by bird-man.server/create-server
 ;; See bootstrap/default-interceptors for additional options you can configure
