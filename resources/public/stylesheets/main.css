@@ -1,0 +1,11 @@
+svg .states {
+  fill: none;
+  stroke: #cccccc;
+  stroke-linejoin: round;
+}
+svg .county {
+  fill: none;
+  stroke: #eeeeee;
+  stroke-linejoin: round;
+}
+
