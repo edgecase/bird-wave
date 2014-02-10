@@ -11,7 +11,18 @@
                  [org.clojure/tools.namespace "0.2.4"]
                  [enlive "1.1.4"]
                  [io.pedestal/pedestal.jetty "0.2.2"]
-                 [com.novemberain/validateur "1.5.0"]]
+                 [com.novemberain/validateur "1.5.0"]
+                 [org.clojure/clojurescript "0.0-2156"]]
+  :plugins      [[lein-cljsbuild "1.0.2"]]
+  :source-paths ["src/clj"]
+  :cljsbuild {
+    :builds [{
+      :source-paths ["src/cljs"]
+      :compiler {
+        :externs ["externs/d3_externs_min.js" "externs/queue.js" "externs/topojson.js"]
+        :output-to "resources/public/javascript/client-dev.js"
+        :output-dir "resources/public/javascript"
+        :optimizations :none}}]}
 
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
