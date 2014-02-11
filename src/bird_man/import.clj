@@ -78,5 +78,5 @@
       (coerce parse-count
               :sighting/count)))
 
-(def sample-seed-data
-  (map sighting-seed (sighting-seq "resources/sample_data/birds.txt")))
+(defn seed-data [file]
+  (map sighting-seed (sighting-seq file)))
