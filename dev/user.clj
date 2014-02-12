@@ -52,7 +52,7 @@
   #'system."
   []
   (pedestal-dev/stop)
-  (when (= :dev (:transactor @config))
+  (when (= :mem (:transactor @config))
     (d/delete-database (:url @config)))
   (reset! system nil))
 
@@ -72,6 +72,7 @@
   (if (configured?)
     (let [c @config]
       (stop)
-      (apply configure c)
+      ;; TODO: need to figure out how to preserve config data after reset -John
+      ;; (configure c)
       (refresh :after 'user/go))
     (println "System is not configured")))
