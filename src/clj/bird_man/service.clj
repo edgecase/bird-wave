@@ -5,16 +5,28 @@
               [io.pedestal.service.http.route.definition :refer [defroutes]]
               [io.pedestal.service.interceptor :refer [defon-request defbefore defafter]]
               [io.pedestal.service.log :as log]
-              [hiccup.core :as hiccup]
+              [hiccup.page :as page]
               [hiccup.form :as form]
               [ring.util.response :as ring-resp]
               [ring.util.codec :as ring-codec]
               [datomic.api :as d :refer (q db)]))
 
 (defn home-page [request]
-  (hiccup/html
-    [:html
-     [:body]]))
+  (ring-resp/response
+    (page/html5
+      {:lang "en"}
+      [:head
+       [:meta {:charset "utf-8"}]
+       [:title "Frequency Map"]]
+      [:body
+       [:script {:src "/javascript/goog/base.js"}]
+       [:script {:src "/javascript/d3.v3.js"}]
+       [:script {:src "/javascript/queue.js"}]
+       [:script {:src "/javascript/topojson.js"}]
+       [:script {:src "/javascript/client-dev.js"}]
+       (page/include-css "/stylesheets/main.css")
+       [:script "goog.require('bird_man.client');"]
+       [:script "bird_man.client.start_client();"]])))
 
 (defonce datomic-connection nil)
 
@@ -59,10 +71,10 @@
 (defroutes routes
   [[["/" {:get home-page}
      ;; Set default interceptors for /about and any other paths under /
-     ^:interceptors [(body-params/body-params) datomic-conn bootstrap/json-body]
+     ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
      ["/species" {:get species-index}
-      ["/:common-name" {:get countywise-frequencies}
-       ^:interceptors [log-request log-response]]]]]])
+       ^:interceptors [bootstrap/json-body]
+      ["/:common-name" {:get countywise-frequencies}]]]]])
 
 ;; Consumed by bird-man.server/create-server
 ;; See bootstrap/default-interceptors for additional options you can configure
