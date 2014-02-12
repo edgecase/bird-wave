@@ -5,13 +5,16 @@
               [io.pedestal.service.http.route.definition :refer [defroutes]]
               [io.pedestal.service.interceptor :refer [defon-request defbefore defafter]]
               [io.pedestal.service.log :as log]
+              [hiccup.core :as hiccup]
+              [hiccup.form :as form]
               [ring.util.response :as ring-resp]
               [ring.util.codec :as ring-codec]
               [datomic.api :as d :refer (q db)]))
 
-(defn home-page
-  [request]
-  (ring-resp/response "Hello World!"))
+(defn home-page [request]
+  (hiccup/html
+    [:html
+     [:body]]))
 
 (defonce datomic-connection nil)
 
@@ -42,14 +45,16 @@
 (defn countywise-frequencies [{conn :datomic-conn :as request}]
   (ring-resp/response
     (let [common-name (ring-codec/url-decode (get-in request [:path-params :common-name]))]
-      (d/q '[:find ?county ?state (sum ?count) (count ?e)
+      (map zipmap
+           (repeat [:county :state :total :sightings])
+           (d/q '[:find ?county ?state (sum ?count) (count ?e)
            :in $ ?name
            :where
            [?e :sighting/common-name ?name]
-           [?e :sighting/state ?state]
+           [?e :sighting/state-code ?state]
            [?e :sighting/count ?count]
            [?e :sighting/county ?county]]
-         (d/db conn) common-name))))
+         (d/db conn) common-name)))))
 
 (defroutes routes
   [[["/" {:get home-page}
