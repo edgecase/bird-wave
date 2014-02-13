@@ -5,13 +5,14 @@
             [datomic.api :as d]))
 
 (def fields
+  ;; TODO: consider including guid as a primary key for sighting
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
-   nil                              ;; "TAXONOMIC ORDER"
+   :taxon/order                     ;; "TAXONOMIC ORDER"
    nil                              ;; "CATEGORY"
-   :sighting/common-name            ;; "COMMON NAME"
-   nil                              ;; "SCIENTIFIC NAME"
-   :sighting/subspecies-common-name ;; "SUBSPECIES COMMON NAME"
-   nil                              ;; "SUBSPECIES SCIENTIFIC NAME"
+   :taxon/common-name               ;; "COMMON NAME"
+   :taxon/scientific-name           ;; "SCIENTIFIC NAME"
+   :taxon/subspecies-common-name    ;; "SUBSPECIES COMMON NAME"
+   :taxon/subspecies-scientific-name;; "SUBSPECIES SCIENTIFIC NAME"
    :sighting/count                  ;; "OBSERVATION COUNT" ;; x indicates uncounted
    nil                              ;; "BREEDING BIRD ATLAS CODE"
    nil                              ;; "AGE/SEX"
@@ -34,7 +35,7 @@
    nil                              ;; "OBSERVER ID"
    nil                              ;; "FIRST NAME"
    nil                              ;; "LAST NAME"
-   :sighting/event-id               ;; "SAMPLING EVENT IDENTIFIER"
+   nil                              ;; "SAMPLING EVENT IDENTIFIER"
    nil                              ;; "PROTOCOL TYPE"
    nil                              ;; "PROJECT CODE"
    nil                              ;; "DURATION MINUTES"
@@ -48,32 +49,52 @@
    nil                              ;; "REASON"
    ])
 
-(defn sighting [plaintext-row]
+(defn sighting
+  "given a line of text, split on tabs and return the fields we care about
+   (indicated by non-nil presence in fields vector)"
+  [plaintext-row]
   (into {}
-        (filter (complement nil?)
+        (remove nil?
                 (map #(if % [% %2])
                      fields
                      (cs/split plaintext-row #"\t")))))
 
-(defn sighting-seq [filename]
+(defn sighting-seq
+  "Return a lazy sequence of lines from filename, transformed into sighting maps"
+  [filename skip-rows]
   (map sighting (take-while (complement nil?)
-                            (drop 1 (line-seq (io/reader filename))))))
+                            (drop (if skip-rows skip-rows 1)
+                                  (line-seq (io/reader filename))))))
 
 (defn coerce [m f & [key & keys]]
   (if key
     (recur (assoc m key (f (get m key))) f keys)
     m))
 
-(defn sighting-seed [sighting]
+(defn parse-count [s]
+  (if (= "X" s) 1 (Long/parseLong s)))
+
+(defn coerce-values [sighting]
   (-> sighting
-      (assoc :db/id (d/tempid :db.part/user))
-      (coerce #(bigdec %)
+      (coerce bigdec
               :sighting/latitude
               :sighting/longitude)
-      (coerce #(inst/read-instant-date %)
+      (coerce inst/read-instant-date
               :sighting/date)
-      (coerce #(Long/parseLong %)
+      (coerce parse-count
               :sighting/count)))
 
-(def sample-seed-data
-  (map sighting-seed (sighting-seq "resources/sample_data/birds.txt")))
+(defn split-taxon
+  "return a pair of [taxon sighting] split by their attribute namespace"
+  [sighting]
+  (let [split (group-by (fn [[k v]] (namespace k))
+                        sighting)]
+    [(into {} (get split "taxon"))
+     (into {} (get split "sighting"))]))
+
+(defn seed-data
+  "Lazy sequence of lines from file, manipulated into [taxon sighting] pairs"
+  [file skip-rows]
+  (->> (sighting-seq file skip-rows)
+       (map coerce-values)
+       (map split-taxon)))
