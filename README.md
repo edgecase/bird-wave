@@ -1,23 +1,25 @@
 # bird-man
 
-FIXME
 
 ## Getting Started
 
-1. Start the application: `lein run-dev` \*
-2. Go to [localhost:8080](http://localhost:8080/) to see: `Hello World!`
-3. Read your app's source code at src/bird_man/service.clj. Explore the docs of functions
-   that define routes and responses.
-4. Run your app's tests with `lein test`. Read the tests at test/bird_man/service_test.clj.
-5. Learn more! See the [Links section below](#links).
+1. Launch a repl
+2. (configure)
+3. (go)
 
-\* `lein run-dev` automatically detects code changes. Alternatively, you can run in production mode
-with `lein run`.
+This launches the web server and an in-memory datomic transactor. A small
+seed file is also loaded.
 
-## Configuration
+## Getting More Data
 
-To configure logging see config/logback.xml. By default, the app logs to stdout and logs/.
-To learn more about configuring Logback, read its [documentation](http://logback.qos.ch/documentation.html).
+You have a couple of options here. You can run the import job on the full
+eBird.txt file, but that will take somewhere between 3-5 hours.
 
-## Links
-* [Other examples](https://github.com/pedestal/samples)
+Unless you've made schema changes, a quicker way to load data is to restore from
+a backup.
+
+`$ bin/datomic restore-db s3://birdman.neo.com/backups/2014/02 datomic:dev://localhost:4334/birdman`
+
+## Backing Up
+
+`$ bin/datomic backup-db datomic:dev://localhost:4334/birdman s3://birdman.neo.com/backups/2014/02`
