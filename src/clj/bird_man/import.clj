@@ -5,7 +5,8 @@
             [datomic.api :as d]))
 
 (def fields
-  [nil                              ;; "GLOBAL UNIQUE IDENTIFIER"
+  ;; TODO: consider including guid as a primary key for sighting
+  [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
    :taxon/order                     ;; "TAXONOMIC ORDER"
    nil                              ;; "CATEGORY"
    :taxon/common-name               ;; "COMMON NAME"
@@ -60,9 +61,10 @@
 
 (defn sighting-seq
   "Return a lazy sequence of lines from filename, transformed into sighting maps"
-  [filename]
+  [filename skip-rows]
   (map sighting (take-while (complement nil?)
-                            (drop 1 (line-seq (io/reader filename))))))
+                            (drop (if skip-rows skip-rows 1)
+                                  (line-seq (io/reader filename))))))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -92,7 +94,7 @@
 
 (defn seed-data
   "Lazy sequence of lines from file, manipulated into [taxon sighting] pairs"
-  [file]
-  (->> (sighting-seq file)
+  [file skip-rows]
+  (->> (sighting-seq file skip-rows)
        (map coerce-values)
        (map split-taxon)))

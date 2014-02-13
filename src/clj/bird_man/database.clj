@@ -26,12 +26,18 @@
                          (assoc sighting
                            :db/id (d/tempid :db.part/user)
                            :sighting/taxon tmp-taxon-id)]))))]
-    (d/transact conn (flatten tx-data))))
+    @(d/transact conn (flatten tx-data))))
 
-(defn seed-rows [conn {:keys [seed-file batch-size]}]
-  (loop [batch (partition-all batch-size (import/seed-data seed-file)) count 0]
+(defn seed-rows [conn {:keys [seed-file batch-size skip-rows]}]
+  (loop [batch (partition-all batch-size (import/seed-data seed-file skip-rows)) count 0]
     (let [b (first batch) more (next batch)]
-      (transact-rows conn b)
+      (try
+        (transact-rows conn b)
+        (catch Throwable t
+          (println "exception caught" t)
+          (println "retrying after 10s")
+          (Thread/sleep 10000)
+          (transact-rows conn b)))
       (println "Imported" (* batch-size (inc count)) "lines")
       (when more
         (recur more (inc count))))))

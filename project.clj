@@ -25,6 +25,7 @@
         :optimizations :none}}]}
 
   :min-lein-version "2.0.0"
+  :jvm-opts ["-Xmx2g"]
   :resource-paths ["config", "resources"]
   :aliases {"run-dev" ["trampoline" "run" "-m" "bird-man.server/run-dev"]}
   :profiles {:dev {:source-paths ["dev"]}})
