@@ -46,13 +46,11 @@
   context)
 
 (defn species-index [{conn :datomic-conn :as request}]
-  (ring-resp/response
-   (map zipmap
-        (repeat [:name :count])
-        (d/q '[:find ?name (sum ?count)
-               :where [?e :sighting/common-name ?name]
-               [?e :sighting/count ?count]]
-             (d/db conn)))))
+  (let [db (db conn)]
+    (->> (d/q '[:find ?e :where [?e :taxon/order _]] db)
+         (map first)
+         (map (partial d/entity db))
+         (ring-resp/response))))
 
 (defn countywise-frequencies [{conn :datomic-conn :as request}]
   (ring-resp/response

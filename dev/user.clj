@@ -13,17 +13,29 @@
             bird-man.database))
 
 (defonce system (atom nil))
+(defonce config (atom {:seed-file "resources/sample_data/birds.txt"
+                       :transactor :mem
+                       :batch-size 1000}))
+
+(defn configured? []
+  (:url @config))
+
+(defn configure
+  "Configure database type"
+  [ & [conf]]
+  (swap! config merge conf)
+  (swap! config assoc :url
+         (case (:transactor @config)
+                 :mem "datomic:mem://birdman"
+                 :dev "datomic:dev://localhost:4334/birdman"
+                 :pg  "datomic:sql://birdman?jdbc:postgresql://localhost:5432/datomic?user=datomic&password=datomic"
+                 (throw (ex-info "No connection string for :transactor" @config)))))
 
 (defn init
-  "Creates and initializes the system under development in the Var
-  #'system."
-  [create]
-  (let [url "datomic:sql://dev?jdbc:postgresql://localhost:5432/datomic?user=datomic&password=datomic"
-        conn (bird-man.database/init url create)]
-    (reset! system (merge (pedestal-dev/init
-                           bird-man.service/service
-                           #'bird-man.service/routes)
-                          {:db-url url :db-conn conn}))))
+  "Creates and initializes the system under development"
+  []
+  (reset! system (merge (pedestal-dev/init bird-man.service/service #'bird-man.service/routes)
+                        {:db-conn (bird-man.database/init @config)})))
 
 (def conn (atom nil))
 
@@ -40,20 +52,27 @@
   #'system."
   []
   (pedestal-dev/stop)
-  (d/delete-database (:db-url @system))
+  (when (= :mem (:transactor @config))
+    (d/delete-database (:url @config)))
   (reset! system nil))
 
 (defn go
   "Initializes and starts the system running."
-  ([]
-   (go true))
-  ([createdb]
-  (init createdb)
-  (start)
-  :ready))
+  []
+  (if (configured?)
+    (do
+      (init)
+      (start)
+      :ready)
+    (println "Please call configure first")))
 
 (defn reset
   "Stops the system, reloads modified source files, and restarts it."
   []
-  (stop)
-  (refresh :after 'user/go))
+  (if (configured?)
+    (let [c @config]
+      (stop)
+      ;; TODO: need to figure out how to preserve config data after reset -John
+      ;; (configure c)
+      (refresh :after 'user/go))
+    (println "System is not configured")))

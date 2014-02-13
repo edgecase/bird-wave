@@ -4,4 +4,4 @@ logs/
 *.DS_Store
 /.lein-repl-history
 /.nrepl-port
-birds-full.txt
+/resources/sample_data/birds-full.txt
