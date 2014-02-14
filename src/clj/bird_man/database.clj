@@ -1,7 +1,8 @@
 (ns bird-man.database
   (:require [bird-man.import :as import]
             [datomic.api :as d :refer (db q)]
-            [clojure.tools.trace :refer (deftrace trace)]))
+            ;; [clojure.tools.trace :refer (deftrace trace)]
+            ))
 
 (defn existing-taxons [db taxons]
   (into {}
@@ -28,8 +29,8 @@
                            :sighting/taxon tmp-taxon-id)]))))]
     @(d/transact conn (flatten tx-data))))
 
-(defn seed-rows [conn {:keys [seed-file batch-size skip-rows]}]
-  (loop [batch (partition-all batch-size (import/seed-data seed-file skip-rows)) count 0]
+(defn seed-rows [conn {:keys [seed-file batch-size skip-rows nth-row]}]
+  (loop [batch (partition-all batch-size (import/seed-data seed-file skip-rows nth-row)) count 0]
     (let [b (first batch) more (next batch)]
       (try
         (transact-rows conn b)

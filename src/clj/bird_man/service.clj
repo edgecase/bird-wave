@@ -72,7 +72,9 @@
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
      ["/species" {:get species-index}
        ^:interceptors [bootstrap/json-body]
-      ["/:common-name" {:get countywise-frequencies}]]]]])
+      ["/:taxon/:year-month" 
+       ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
+       {:get countywise-frequencies}]]]]])
 
 ;; Consumed by bird-man.server/create-server
 ;; See bootstrap/default-interceptors for additional options you can configure

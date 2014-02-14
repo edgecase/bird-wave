@@ -16,7 +16,8 @@
 (defonce config (atom {:seed-file "resources/sample_data/birds.txt"
                        :transactor :mem
                        :batch-size 1000
-                       :skip-rows nil}))
+                       :skip-rows nil
+                       :nth-row 1}))
 
 (defn configured? []
   (:url @config))

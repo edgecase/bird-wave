@@ -12,6 +12,7 @@
                  [enlive "1.1.4"]
                  [io.pedestal/pedestal.jetty "0.2.2"]
                  [com.novemberain/validateur "1.5.0"]
+                 [criterium "0.4.3"]
                  [org.clojure/clojurescript "0.0-2156"]]
   :plugins      [[lein-cljsbuild "1.0.2"]]
   :source-paths ["src/clj"]
