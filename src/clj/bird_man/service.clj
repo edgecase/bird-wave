@@ -3,7 +3,7 @@
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
               [io.pedestal.service.http.route.definition :refer [defroutes]]
-              [io.pedestal.service.interceptor :refer [defon-request defbefore defafter]]
+              [io.pedestal.service.interceptor :refer [defon-request]]
               [io.pedestal.service.log :as log]
               [hiccup.page :as page]
               [hiccup.form :as form]
@@ -19,12 +19,24 @@
        [:meta {:charset "utf-8"}]
        [:title "Frequency Map"]]
       [:body
-       [:script {:src "/javascript/goog/base.js"}]
-       [:script {:src "/javascript/d3.v3.js"}]
-       [:script {:src "/javascript/queue.js"}]
-       [:script {:src "/javascript/topojson.js"}]
-       [:script {:src "/javascript/client-dev.js"}]
+
+       [:div.filters
+        [:select.bird
+         [:option "Select bird"]
+         [:option {:value "21319"} "Carolina Wren"]
+         [:option {:value "24499"} "Mountain Bluebird"]
+         [:option {:value "27861"} "American Redstart"]
+         [:option {:value "28094"} "Wilson's Warbler"]
+         [:option {:value "2881"} "Bald Eagle"]]]
+
        (page/include-css "/stylesheets/main.css")
+       (page/include-css "/stylesheets/d3.slider.css")
+       (page/include-js "/javascript/goog/base.js")
+       (page/include-js "/javascript/d3.v3.js")
+       (page/include-js "/javascript/topojson.js")
+       (page/include-js "/javascript/client-dev.js")
+       (page/include-js "/javascript/colorbrewer.js")
+       (page/include-js "/javascript/d3.slider.js")
        [:script "goog.require('bird_man.client');"]
        [:script "bird_man.client.start_client();"]])))
 
@@ -37,14 +49,6 @@
   "Add a conn reference to each request"
   add-datomic-conn)
 
-(defbefore log-request [context]
-  (log/info :request (:request context))
-  context)
-
-(defafter log-response [context]
-  (log/info :response (:response context))
-  context)
-
 (defn species-index [{conn :datomic-conn :as request}]
   (let [db (db conn)]
     (->> (d/q '[:find ?e :where [?e :taxon/order _]] db)
@@ -54,17 +58,21 @@
 
 (defn countywise-frequencies [{conn :datomic-conn :as request}]
   (ring-resp/response
-    (let [common-name (ring-codec/url-decode (get-in request [:path-params :common-name]))]
+    (let [{:keys [taxon year-month]} (:path-params request) ]
       (map zipmap
            (repeat [:county :state :total :sightings])
-           (d/q '[:find ?county ?state (sum ?count) (count ?e)
-           :in $ ?name
-           :where
-           [?e :sighting/common-name ?name]
-           [?e :sighting/state-code ?state]
-           [?e :sighting/count ?count]
-           [?e :sighting/county ?county]]
-         (d/db conn) common-name)))))
+           (q '[:find ?county ?state (sum ?count) (count ?e)
+                :in $ ?taxon ?ym
+                :where
+                [?t :taxon/order ?taxon]
+                [?e :sighting/taxon ?t]
+                [?e :sighting/month-yr ?ym]
+                [?e :sighting/state-code ?state]
+                [?e :sighting/count ?count]
+                [?e :sighting/county ?county]]
+              (db conn)
+              taxon
+              year-month) ))))
 
 (defroutes routes
   [[["/" {:get home-page}

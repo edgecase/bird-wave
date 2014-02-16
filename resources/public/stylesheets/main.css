@@ -1,9 +1,21 @@
 svg .states {
   fill: none;
-  stroke: #fff;
+  stroke: #225ea8;
   stroke-linejoin: round;
 }
+
 svg .county {
-  fill: none;
+  fill: #081d58;
 }
 
+body {
+  position: relative;
+  width: 1000px;
+  margin: auto;
+}
+
+.filters {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+}
