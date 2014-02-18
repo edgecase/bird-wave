@@ -19,16 +19,6 @@
        [:meta {:charset "utf-8"}]
        [:title "Frequency Map"]]
       [:body
-
-       [:div.filters
-        [:select.bird
-         [:option "Select bird"]
-         [:option {:value "21319"} "Carolina Wren"]
-         [:option {:value "24499"} "Mountain Bluebird"]
-         [:option {:value "27861"} "American Redstart"]
-         [:option {:value "28094"} "Wilson's Warbler"]
-         [:option {:value "2881"} "Bald Eagle"]]]
-
        (page/include-css "/stylesheets/main.css")
        (page/include-css "/stylesheets/d3.slider.css")
        (page/include-js "/javascript/goog/base.js")
@@ -51,9 +41,12 @@
 
 (defn species-index [{conn :datomic-conn :as request}]
   (let [db (db conn)]
-    (->> (d/q '[:find ?e :where [?e :taxon/order _]] db)
+    (->> (d/q '[:find ?e
+                :where
+                [?e :taxon/order _]] db)
          (map first)
          (map (partial d/entity db))
+         (sort-by :taxon/common-name)
          (ring-resp/response))))
 
 (defn countywise-frequencies [{conn :datomic-conn :as request}]

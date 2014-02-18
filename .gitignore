@@ -5,3 +5,4 @@ logs/
 /.lein-repl-history
 /.nrepl-port
 /resources/sample_data/birds-full.txt
+/resources/public/javascript/
