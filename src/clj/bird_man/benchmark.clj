@@ -33,3 +33,16 @@
      db
      taxon
      "2013/01"))
+
+(defn year-query [db taxon]
+  (q '[:find ?county ?state (sum ?count) (count ?e) ?ym
+       :in $ ?taxon
+       :where
+       [?t :taxon/order ?taxon]
+       [?e :sighting/taxon ?t]
+       [?e :sighting/month-yr ?ym]
+       [?e :sighting/state-code ?state]
+       [?e :sighting/count ?count]
+       [?e :sighting/county ?county]]
+     db
+     taxon))

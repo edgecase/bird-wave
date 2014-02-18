@@ -65,7 +65,27 @@
                 [?e :sighting/county ?county]]
               (db conn)
               taxon
-              year-month) ))))
+              year-month)))))
+
+(defn grouped-frequencies [{conn :datomic-conn :as request}]
+  (ring-resp/response
+    (let [{:keys [taxon]} (:path-params request)]
+      (->> (map zipmap
+           (repeat [:county :state :month-yr :sightings :total])
+           (q '[:find ?county ?state ?ym (sum ?count) (count ?e)
+                :in $ ?taxon
+                :where
+                [?t :taxon/order ?taxon]
+                [?e :sighting/taxon ?t]
+                [?e :sighting/month-yr ?ym]
+                [?e :sighting/state-code ?state]
+                [?e :sighting/count ?count]
+                [?e :sighting/county ?county]]
+              (db conn)
+              taxon))
+           (group-by :month-yr)
+           (sort-by key)
+           (into {})))))
 
 (defroutes routes
   [[["/" {:get home-page}
@@ -73,9 +93,12 @@
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
      ["/species" {:get species-index}
        ^:interceptors [bootstrap/json-body]
-      ["/:taxon/:year-month" 
-       ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
-       {:get countywise-frequencies}]]]]])
+      ["/:taxon"
+       ^:constraints {:taxon #"\d+\.?\d+"}
+       {:get grouped-frequencies}
+        ["/:year-month"
+         ^:constraints {:year-month #"\d{4}/\d{2}"}
+         {:get countywise-frequencies}]]]]]])
 
 ;; Consumed by bird-man.server/create-server
 ;; See bootstrap/default-interceptors for additional options you can configure
