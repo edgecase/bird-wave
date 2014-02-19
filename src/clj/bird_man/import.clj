@@ -61,10 +61,11 @@
 
 (defn sighting-seq
   "Return a lazy sequence of lines from filename, transformed into sighting maps"
-  [filename skip-rows]
-  (map sighting (take-while (complement nil?)
-                            (drop (if skip-rows skip-rows 1)
-                                  (line-seq (io/reader filename))))))
+  [filename skip-rows nth-row]
+  (map sighting
+       (take-nth nth-row
+                 (drop (if skip-rows skip-rows 1)
+                       (line-seq (io/reader filename))))))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -75,14 +76,16 @@
   (if (= "X" s) 1 (Long/parseLong s)))
 
 (defn coerce-values [sighting]
-  (-> sighting
-      (coerce bigdec
-              :sighting/latitude
-              :sighting/longitude)
-      (coerce inst/read-instant-date
-              :sighting/date)
-      (coerce parse-count
-              :sighting/count)))
+  (let [date (inst/read-instant-date (:sighting/date sighting)) ]
+    (-> sighting
+        (coerce bigdec
+                :sighting/latitude
+                :sighting/longitude)
+        (coerce parse-count
+                :sighting/count)
+        (assoc :sighting/date date)
+        (assoc :sighting/month-yr (format "%tY/%tm" date date))
+        )))
 
 (defn split-taxon
   "return a pair of [taxon sighting] split by their attribute namespace"
@@ -94,7 +97,7 @@
 
 (defn seed-data
   "Lazy sequence of lines from file, manipulated into [taxon sighting] pairs"
-  [file skip-rows]
-  (->> (sighting-seq file skip-rows)
+  [file skip-rows nth-row]
+  (->> (sighting-seq file skip-rows nth-row)
        (map coerce-values)
        (map split-taxon)))

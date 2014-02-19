@@ -102,4 +102,10 @@
   :db/id #db/id[:db.part/db]
   :db.install/_attribute :db.part/db}
 
+ {:db/ident :sighting/month-yr
+  :db/valueType :db.type/string
+  :db/cardinality :db.cardinality/one
+  :db/index true
+  :db/id #db/id[:db.part/db]
+  :db.install/_attribute :db.part/db}
  ]

@@ -1,0 +1,76 @@
+svg .states {
+  fill: none;
+  stroke: #225ea8;
+  stroke-linejoin: round;
+}
+
+svg .county {
+  fill: #081d58;
+}
+
+svg.d3-slider-axis text {
+  fill: #ccc;
+}
+
+g.axis text {
+  fill: #ccc;
+  font-size: 12px;
+}
+
+g.axis line, g.axis path {
+  fill: none;
+  stroke: #ccc;
+  shape-rendering: crispEdges;
+}
+
+body {
+  position: relative;
+  box-sizing: border-box;
+  font-family: Verdana, Arial, sans-serif;
+  width: 1250px;
+  margin: auto;
+  background-color: #252121;
+}
+
+#map {
+  width: 1000px;
+  margin-left: 25px;
+}
+
+#slider {
+  width: 800px;
+  margin-left: 25px;
+}
+
+#species {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  height: 600px;
+  width: 200px;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  background: #081d58;
+  opacity: 0.6;
+  border: 1px solid #ccc;
+}
+
+#species ul {
+  list-style-type: none;
+  padding-left: 0px;
+}
+
+#species li {
+  font-size: 12px;
+  color: #eee;
+  line-height: 1.4em;
+  margin: 2px;
+  padding: 2px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+}
+
+#species li:hover, #species li.selected {
+  background: #c7e9b4;
+  color: #444;
+}
