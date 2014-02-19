@@ -1,4 +1,11 @@
 [
+
+ ;; partition in which to place all taxonomies for fast index
+
+ {:db/id #db/id[:db.part/db]
+  :db/ident :taxonomy
+  :db.install/_partition :db.part/db}
+
  ;; taxons - a species of bird
 
  {:db/ident :taxon/order
