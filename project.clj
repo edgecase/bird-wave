@@ -20,7 +20,7 @@
     :builds [{
       :source-paths ["src/cljs"]
       :compiler {
-        :externs ["externs/d3_externs_min.js" "externs/queue.js" "externs/topojson.js"]
+        :externs ["externs/d3_externs_min.js" "externs/topojson.js"]
         :output-to "resources/public/javascript/client-dev.js"
         :output-dir "resources/public/javascript"
         :optimizations :none}}]}
