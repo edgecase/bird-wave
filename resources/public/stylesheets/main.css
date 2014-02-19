@@ -1,6 +1,6 @@
 svg .states {
   fill: none;
-  stroke: #225ea8;
+  stroke: #555;
   stroke-linejoin: round;
 }
 
@@ -17,29 +17,34 @@ g.axis text {
   font-size: 12px;
 }
 
-g.axis line, g.axis path {
+g.axis line {
   fill: none;
   stroke: #ccc;
   shape-rendering: crispEdges;
+}
+
+g.axis path.domain {
+  fill: none;
+  stroke: none;
 }
 
 body {
   position: relative;
   box-sizing: border-box;
   font-family: Verdana, Arial, sans-serif;
-  width: 1250px;
+  width: 1150px;
   margin: auto;
-  background-color: #252121;
+  background-color: #333;
 }
 
 #map {
-  width: 1000px;
+  width: 900px;
   margin-left: 25px;
 }
 
 #slider {
   width: 800px;
-  margin-left: 25px;
+  margin-left: 100px;
 }
 
 #species {

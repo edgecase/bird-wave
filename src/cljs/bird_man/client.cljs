@@ -4,7 +4,8 @@
             [goog.string.format :as gformat]
             [bird-man.util :refer [debounce]]))
 
-(def svg-dim {:width 1000 :height 600})
+(def svg-dim {:width 900 :height 600})
+(def key-dim {:width 10 :height 200})
 
 (def svg (-> js/d3
              (.select "body")
@@ -66,7 +67,7 @@
 (def key-scale ( -> js/d3.scale
                     (.linear)
                     (.domain (array 5 0))
-                    (.range (array 0 200))))
+                    (.range (array 0 (:height key-dim)))))
 
 (def key-axis ( -> (js/d3.svg.axis)
                    (.scale key-scale)
@@ -115,11 +116,20 @@
        (.datum (js/topojson.mesh us (aget us "objects" "states")))
        (.classed "states" true)
        (.attr "d" path))
-  ( -> svg
-       (.append "g")
-       (.classed "axis" true)
-       (.attr "transform", (str "translate(" (:width svg-dim) "," (/ (:height svg-dim) 1.5) ")"))
-       (.call key-axis))
+  (def key-g ( -> svg
+                  (.append "g")
+                  (.classed "axis" true)
+                  (.attr "transform", (str "translate(" (- (:width svg-dim) (:width key-dim)) "," (/ (:height svg-dim) 1.5) ")"))))
+  (-> key-g
+      (.selectAll "rect")
+      (.data (-> (.range color) (.map #(.invertExtent color %))))
+      (.enter)
+      (.append "rect")
+      (.attr "height" #(- (:height key-dim) (key-scale (- (nth % 1) (nth % 0)))))
+      (.attr "width" 8)
+      (.attr "y" #(key-scale (nth % 1)))
+      (.style "fill" #(nth (.range color) %2)))
+  (-> key-g (.call key-axis))
   ( -> slider
        (.call (-> (js/d3.slider)
                   (.axis true)
