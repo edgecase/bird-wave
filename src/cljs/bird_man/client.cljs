@@ -37,9 +37,12 @@
   (apply str (interpose "-" [state county])))
 
 (defn populate-freqs [stats]
-  (reset! freq-by-county {})
-  (doseq [s stats]
-    (swap! freq-by-county assoc (build-key (aget s "state") (aget s "county")) (/ (aget s "total") (aget s "sightings")))))
+  (reset! freq-by-county
+          (into {}
+                (map (fn [s]
+                       [(build-key (aget s "state") (aget s "county"))
+                        (/ (aget s "total") (aget s "sightings"))])
+                     stats))))
 
 (defn freq-for-county [data]
   (let [p (aget data "properties")

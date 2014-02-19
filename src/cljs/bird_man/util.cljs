@@ -1,12 +1,11 @@
 (ns bird-man.util)
 
 ;; https://gist.github.com/jhickner/2363070
-(defn ^:export debounce [func wait immediate]
+(defn debounce [func wait immediate]
   (let [timeout (atom nil)]
     (fn []
-      (this-as this
-               (let [context this
-                     args js/arguments
+      (this-as context
+               (let [args js/arguments
                      later (fn []
                              (reset! timeout nil)
                              (when-not immediate
