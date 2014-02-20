@@ -3,34 +3,51 @@
             [datomic.api :as d :refer (db q)]
             [clojure.string :as cs]
             [clojure.set :as cset]
-            ;; [clojure.tools.trace :refer (deftrace trace)]
+            ;;[clojure.tools.trace :refer (deftrace trace)]
             ))
 
 (defn partition-name
-  "Return partition name as keyword given a taxonomic order string"
+  "Return partition name as keyword given a taxonomic order string.
+   Sightings are typically queried by species, so that is how we partition."
   [order]
   (keyword (str "taxon/order-"
                 (cs/trim (cs/replace order #"\." "-")))))
+
+(def taxon-partition
+  "Taxonomy information is queried for the index page so we put all
+   in the same partition."
+  :taxonomy)
 
 (defn existing-taxons
   "Return a map from taxonomic order to :db/id"
   [db taxons]
   (into {}
-        (q '[:find ?taxonomic-order ?taxon
-             :in $ [?taxonomic-order]
+        (q '[:find ?order ?taxon
+             :in $ [?order]
              :where
              [?taxon :taxon/order ?order]]
            db
            (map #(vector (:taxon/order %)) taxons))))
 
+(defn existing-partitions
+  "Return a set of all current partitions"
+  [db]
+  (set (map first (q '[:find ?part
+                       :where
+                       [?e :db.install/partition ?p]
+                       [?p :db/ident ?part]]
+                     db))))
+
 (defn transact-rows [conn pairs]
-  (let [taxons (map first pairs)
-        existing-taxons (existing-taxons (db conn) taxons)
-        partitions-to-create (cset/difference (set (map :taxon/order taxons))
-                                              (set (keys existing-taxons)))
-        new-partitions-tx (for [order partitions-to-create]
+  (let [database (db conn)
+        taxons (map first pairs)
+        existing-taxons (existing-taxons database taxons)
+        existing-partitions (existing-partitions database)
+        needed-partitions (set (map partition-name (map :taxon/order taxons)))
+        diff (cset/difference needed-partitions existing-partitions)
+        new-partitions-tx (for [part diff]
                             {:db/id (d/tempid :db.part/db)
-                             :db/ident (partition-name order)
+                             :db/ident part
                              :db.install/_partition :db.part/db})
         tx-data (for [[taxon sighting] pairs]
                    (let [taxon-id (get existing-taxons (:taxon/order taxon))]
@@ -38,14 +55,14 @@
                        [(assoc sighting
                           :db/id (d/tempid (d/part taxon-id))
                           :sighting/taxon taxon-id)]
-                       (let [part (partition-name (:taxon/order taxon))
-                             tmp-taxon-id (d/tempid part)]
+                       (let [tmp-taxon-id (d/tempid taxon-partition)]
                          [(assoc taxon
                             :db/id tmp-taxon-id)
                           (assoc sighting
-                            :db/id (d/tempid part)
+                            :db/id (d/tempid (partition-name (:taxon/order taxon)))
                             :sighting/taxon tmp-taxon-id)]))))]
     (when (not-empty new-partitions-tx)
+      (println "Creating " (count new-partitions-tx) "new partitions")
       @(d/transact conn new-partitions-tx))
     @(d/transact conn (flatten tx-data))))
 
@@ -56,10 +73,10 @@
         (transact-rows conn b)
         (catch Throwable t
           (println "exception caught" t)
-          (println "retrying after 10s")
-          (Thread/sleep 10000)
+          (println "retrying after 20s")
+          (Thread/sleep 20000)
           (transact-rows conn b)))
-      (println "Imported" (* batch-size (inc count)) "lines")
+      (println "Imported" (+ skip-rows (* batch-size (inc count))) "lines")
       (when more
         (recur more (inc count))))))
 
