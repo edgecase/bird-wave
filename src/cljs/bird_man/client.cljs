@@ -7,7 +7,8 @@
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
-            [goog.events :as events])
+            [goog.events :as events]
+            [ankha.core :as ankha])
   (:import goog.History
            goog.history.EventType))
 
@@ -43,15 +44,15 @@
 
 ;;;;;;;;
 
-(def model (atom {:taxon nil     ; selected taxon
-                  :month-yr nil  ; selected month
-                  :taxonomy []   ; all taxons
-                  :sightings {}  ; sightings for selected taxon, grouped by month-yr
+(def model (atom {:current-taxon nil
+                  :month-yr nil     ; selected month
+                  :taxonomy []      ; all taxons
+                  :sightings {}     ; sightings for selected taxon, grouped by month-yr
                   }))
 
-(defroute "/" [] (swap! model assoc :taxon :nil :month-yr nil))
+(defroute "/" [] (swap! model assoc :current-taxon :nil :month-yr nil))
 (defroute taxon-path "/taxon/:order" [order]
-  (swap! model assoc :taxon order))
+  (swap! model assoc :current-taxon order))
 
 (def history (History.))
 
@@ -63,22 +64,39 @@
 
 (defn species-item [taxon owner]
   (reify
-    om/IRender
-    (render [this]
-      (dom/li #js {:className "taxon"}
-              (dom/a #js {:href (taxon-path {:order (:taxon/order taxon)})}
-          (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
-            sub-name
-            (:taxon/common-name taxon)))))))
+    om/IRenderState
+    (render-state [this {:keys [current-taxon]}]
+      (let [this-taxon (:taxon/order taxon)
+            classes (cs/join " " ["taxon" (if (= current-taxon this-taxon) "selected")])]
+        (dom/li #js {:className classes}
+          (dom/a #js {:href (taxon-path {:order this-taxon})}
+            (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
+              sub-name
+              (:taxon/common-name taxon))))))))
 
 (defn species-list [model owner]
   (reify
     om/IRender
     (render [this]
       (apply dom/ul
-       (om/build-all species-item (:taxonomy model))))))
+       (om/build-all species-item (:taxonomy model)
+                     {:state (select-keys model [:current-taxon])})))))
 
-(om/root species-list model {:target (.getElementById js/document "species")})
+(defn update-map [tx-data cursor]
+  (.log js/console "map updating")
+  (.log js/console tx-data))
+
+(om/root species-list model
+         {:target (.getElementById js/document "species")
+          :tx-listen update-map})
+
+;; for debugging
+;; (om/root
+;;  ankha/inspector
+;;  model
+;;  {:target (js/document.getElementById "inspector")})
+
+
 ;;;;;;;;
 
 
@@ -149,13 +167,16 @@
        (.duration freq-duration)
        (.style "fill" freq-color)))
 
-(defn fetch-month-data [slide timestamp]
+(defn update-month [slide timestamp]
   (let [date (new js/Date timestamp)
         month-yr (str "/" (.getFullYear date) "/" (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString))))]
-    (js/console.log month-yr)
-    (when-not (= month-yr @current-month-yr)
-      (reset! current-month-yr month-yr)
-      (when-not (nil? @current-taxon) (js/d3.json (str "species/" @current-taxon @current-month-yr) update-counties)))))
+    (when-not (= month-yr (:month-yr @model))
+      (swap! @model assoc :month-yr month-yr))))
+
+(defn fetch-month-data [slide timestamp]
+  (when (and (:current-taxon @model)
+             (:month-yr @model))
+    (js/d3.json (str "species/" (:current-taxon @model) (:month-yr @model)) update-counties)))
 
 (defn plot [us]
   (-> svg
@@ -191,7 +212,7 @@
                   (.scale months)
                   (.tickFormat (js/d3.time.format "%B"))
                   (.step (* 1000 60 60 24))
-                  (.on "slide" (debounce fetch-month-data 500 false))))))
+                  (.on "slide" (debounce update-month 500 false))))))
 
 (defn draw-map []
   (js/d3.json "data/us.json" plot))

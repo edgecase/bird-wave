@@ -15,7 +15,8 @@
                  [criterium "0.4.3"]
                  [org.clojure/clojurescript "0.0-2156"]
                  [om "0.5.0"]
-                 [secretary "1.0.1"]]
+                 [secretary "1.0.1"]
+                 [ankha "0.1.1"]]
   :plugins      [[lein-cljsbuild "1.0.2"]]
   :source-paths ["src/clj"]
   :cljsbuild {

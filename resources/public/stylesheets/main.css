@@ -72,14 +72,21 @@ body {
   margin: 2px;
   padding: 2px;
   border-bottom: 1px solid #ccc;
-  cursor: pointer;
 }
 
 #species li a {
   color: #eee;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 #species li:hover, #species li.selected {
   background: #c7e9b4;
   color: #444;
+}
+
+/* for debugging */
+#inspector {
+  background-color: white;
 }
