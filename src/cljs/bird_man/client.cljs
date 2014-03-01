@@ -1,8 +1,15 @@
 (ns bird-man.client
   (:require [clojure.browser.repl :as repl]
             [clojure.string :as cs]
+            [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
-            [bird-man.util :refer [debounce]]))
+            [bird-man.util :refer (debounce)]
+            [om.core :as om :include-macros true]
+            [om.dom :as dom :include-macros true]
+            [secretary.core :as secretary :include-macros true :refer [defroute]]
+            [goog.events :as events])
+  (:import goog.History
+           goog.history.EventType))
 
 (def svg-dim {:width 900 :height 600})
 (def key-dim {:width 10 :height 200})
@@ -20,11 +27,11 @@
                  (.append "div")
                  (.attr "id" "slider")))
 
-(def species-list ( -> js/d3
-                       (.select "body")
-                       (.append "div")
-                       (.attr "id" "species")
-                       (.append "ul")))
+;; (def species-list ( -> js/d3
+;;                        (.select "body")
+;;                        (.append "div")
+;;                        (.attr "id" "species")
+;;                        (.append "ul")))
 
 (def projection ( -> js/d3 (.geo.albersUsa)))
 (def path ( -> js/d3 (.geo.path projection)))
@@ -33,6 +40,47 @@
 (defonce current-taxon (atom nil))
 (defonce current-month-yr (atom nil))
 (defn target [] (.-target (.-event js/d3)))
+
+;;;;;;;;
+
+(def model (atom {:taxon nil     ; selected taxon
+                  :month-yr nil  ; selected month
+                  :taxonomy []   ; all taxons
+                  :sightings {}  ; sightings for selected taxon, grouped by month-yr
+                  }))
+
+(defroute "/" [] (swap! model assoc :taxon :nil :month-yr nil))
+(defroute taxon-path "/taxon/:order" [order]
+  (swap! model assoc :taxon order))
+
+(def history (History.))
+
+(secretary/set-config! :prefix "#")
+(events/listen history EventType.NAVIGATE
+  (fn [e] (secretary/dispatch! (.-token e))))
+
+(.setEnabled history true)
+
+(defn species-item [taxon owner]
+  (reify
+    om/IRender
+    (render [this]
+      (dom/li #js {:className "taxon"}
+              (dom/a #js {:href (taxon-path {:order (:taxon/order taxon)})}
+          (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
+            sub-name
+            (:taxon/common-name taxon)))))))
+
+(defn species-list [model owner]
+  (reify
+    om/IRender
+    (render [this]
+      (apply dom/ul
+       (om/build-all species-item (:taxonomy model))))))
+
+(om/root species-list model {:target (.getElementById js/document "species")})
+;;;;;;;;
+
 
 (defn build-key [state county]
   (apply str (interpose "-" [state county])))
@@ -88,13 +136,7 @@
        (.classed "selected" true)))
 
 (defn list-birds [species]
-  ( -> species-list
-       (.selectAll "li")
-       (.data species)
-       (.enter)
-       (.append "li")
-       (.text #(aget % "taxon/common-name"))
-       (.on "click" select-bird)))
+  (swap! model assoc :taxonomy (map keywordize-keys (js->clj species))))
 
 (defn get-birds []
   (js/d3.json "species" list-birds))

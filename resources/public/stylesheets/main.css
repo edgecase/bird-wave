@@ -75,6 +75,10 @@ body {
   cursor: pointer;
 }
 
+#species li a {
+  color: #eee;
+}
+
 #species li:hover, #species li.selected {
   background: #c7e9b4;
   color: #444;

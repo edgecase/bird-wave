@@ -19,6 +19,7 @@
        [:meta {:charset "utf-8"}]
        [:title "Frequency Map"]]
       [:body
+       [:div#species]
        (page/include-css "/stylesheets/main.css")
        (page/include-css "/stylesheets/d3.slider.css")
        (page/include-js "/javascript/goog/base.js")
@@ -27,6 +28,7 @@
        (page/include-js "/javascript/client-dev.js")
        (page/include-js "/javascript/colorbrewer.js")
        (page/include-js "/javascript/d3.slider.js")
+       (page/include-js "http://fb.me/react-0.9.0.js")
        [:script "goog.require('bird_man.client');"]
        [:script "bird_man.client.start_client();"]])))
 
@@ -73,7 +75,7 @@
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
      ["/species" {:get species-index}
        ^:interceptors [bootstrap/json-body]
-      ["/:taxon/:year-month" 
+      ["/:taxon/:year-month"
        ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
        {:get countywise-frequencies}]]]]])
 
