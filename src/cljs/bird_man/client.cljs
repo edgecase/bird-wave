@@ -82,14 +82,20 @@
        (om/build-all species-item (:taxonomy model)
                      {:state (select-keys model [:current-taxon])})))))
 
-(defn update-map [tx-data cursor]
-  (.log js/console "map updating")
-  (.log js/console tx-data))
+(defn changed? [key old new]
+  (not= (get old key) (get new key)))
 
-(om/root species-list model
-         {:target (.getElementById js/document "species")
-          :tx-listen update-map})
+(defn watch-model
+  "When the model changes update the map"
+  [watch-name ref old new]
+  (.log js/console "month-yr changed: " (changed? :month-yr old new))
+  (.log js/console "current-taxon changed: " (changed? :current-taxon old new))
+  (if (or (changed? :current-taxon old new)
+          (changed? :month-yr old new))
+    (fetch-month-data)))
 
+(om/root species-list model {:target (.getElementById js/document "species")})
+(add-watch model ::model-watch watch-model)
 ;; for debugging
 ;; (om/root
 ;;  ankha/inspector
@@ -171,12 +177,19 @@
   (let [date (new js/Date timestamp)
         month-yr (str "/" (.getFullYear date) "/" (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString))))]
     (when-not (= month-yr (:month-yr @model))
-      (swap! @model assoc :month-yr month-yr))))
+      (swap! model assoc :month-yr month-yr))))
 
-(defn fetch-month-data [slide timestamp]
-  (when (and (:current-taxon @model)
-             (:month-yr @model))
-    (js/d3.json (str "species/" (:current-taxon @model) (:month-yr @model)) update-counties)))
+(defn has-sightings-for-current-state? [model]
+  false)
+
+(defn fetch-month-data []
+  (.log js/console "fetch-month-data")
+  (let [model @model]
+    (when (and (:current-taxon model)
+               (:month-yr model)
+               (not (has-sightings-for-current-state? model)))
+      (.log js/console "doing the fetch for realz")
+      (js/d3.json (str "species/" (:current-taxon model) (:month-yr model)) update-counties))))
 
 (defn plot [us]
   (-> svg
