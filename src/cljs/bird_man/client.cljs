@@ -78,8 +78,14 @@
 (defn freq-color [data]
   (color (freq-for-county data)))
 
-(defn get-birds []
-  (js/d3.json "species" list-birds))
+(defn select-bird [data]
+  (reset! current-taxon (aget data "taxon/order"))
+  ( -> js/d3
+       (.selectAll "#species ul li")
+       (.classed "selected" false))
+  ( -> js/d3
+       (.select (target))
+       (.classed "selected" true)))
 
 (defn list-birds [species]
   ( -> species-list
@@ -90,17 +96,24 @@
        (.text #(aget % "taxon/common-name"))
        (.on "click" select-bird)))
 
-(defn select-bird [data]
-  (reset! current-taxon (aget data "taxon/order"))
-  ( -> js/d3
-       (.selectAll "#species ul li")
-       (.classed "selected" false))
-  ( -> js/d3
-       (.select (target))
-       (.classed "selected" true)))
+(defn get-birds []
+  (js/d3.json "species" list-birds))
 
-(defn draw-map []
-  (js/d3.json "data/us.json" plot))
+(defn update-counties [results]
+  (populate-freqs results)
+  ( -> js/d3
+       (.selectAll "path.county")
+       (.transition)
+       (.duration freq-duration)
+       (.style "fill" freq-color)))
+
+(defn fetch-month-data [slide timestamp]
+  (let [date (new js/Date timestamp)
+        month-yr (str "/" (.getFullYear date) "/" (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString))))]
+    (js/console.log month-yr)
+    (when-not (= month-yr @current-month-yr)
+      (reset! current-month-yr month-yr)
+      (when-not (nil? @current-taxon) (js/d3.json (str "species/" @current-taxon @current-month-yr) update-counties)))))
 
 (defn plot [us]
   (-> svg
@@ -138,24 +151,11 @@
                   (.step (* 1000 60 60 24))
                   (.on "slide" (debounce fetch-month-data 500 false))))))
 
-(defn update-counties [results]
-  (populate-freqs results)
-  ( -> js/d3
-       (.selectAll "path.county")
-       (.transition)
-       (.duration freq-duration)
-       (.style "fill" freq-color)))
+(defn draw-map []
+  (js/d3.json "data/us.json" plot))
 
-(defn fetch-month-data [slide timestamp]
-  (let [date (new js/Date timestamp)
-        month-yr (str "/" (.getFullYear date) "/" (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString))))]
-    (js/console.log month-yr)
-    (when-not (= month-yr @current-month-yr)
-      (reset! current-month-yr month-yr)
-      (when-not (nil? @current-taxon) (js/d3.json (str "species/" @current-taxon @current-month-yr) update-counties)))))
 
 (defn ^:export start-client []
   (get-birds)
   (draw-map)
   (repl/connect "http://localhost:9000/repl"))
-
