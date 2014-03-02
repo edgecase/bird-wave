@@ -20,6 +20,8 @@
        [:title "Frequency Map"]]
       [:body
        [:div#species]
+       [:div#map]
+       [:div#slider]
        [:div#inspector]
        (page/include-css "/stylesheets/main.css")
        (page/include-css "/stylesheets/d3.slider.css")

@@ -47,6 +47,10 @@ body {
   margin-left: 100px;
 }
 
+#slider input {
+  width: 100%;
+}
+
 #species {
   position: absolute;
   top: 0px;
@@ -81,8 +85,7 @@ body {
   display: block;
 }
 
-#species li:hover,
-#species li.selected,
+#species li:hover a,
 #species li.selected a {
   background: #c7e9b4;
   color: #444;
