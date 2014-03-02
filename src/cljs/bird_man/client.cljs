@@ -28,18 +28,10 @@
                  (.append "div")
                  (.attr "id" "slider")))
 
-;; (def species-list ( -> js/d3
-;;                        (.select "body")
-;;                        (.append "div")
-;;                        (.attr "id" "species")
-;;                        (.append "ul")))
-
 (def projection ( -> js/d3 (.geo.albersUsa)))
 (def path ( -> js/d3 (.geo.path projection)))
 
 (defonce freq-by-county (atom {}))
-(defonce current-taxon (atom nil))
-(defonce current-month-yr (atom nil))
 (defn target [] (.-target (.-event js/d3)))
 
 ;;;;;;;;
@@ -50,11 +42,52 @@
                   :sightings {}     ; sightings for selected taxon, grouped by month-yr
                   }))
 
-(defroute "/" [] (swap! model assoc :current-taxon :nil :month-yr nil))
-(defroute taxon-path "/taxon/:order" [order]
-  (swap! model assoc :current-taxon order))
+
+(defn changed? [key old new]
+  (.log js/console (name key) (key old) (key new))
+  (not= (get old key) (get new key)))
+
+(defn has-sightings-for-current-state? [model]
+  false)
+
+(defn fetch-month-data []
+  (.log js/console "fetch-month-data")
+  (let [model @model]
+    (when (and (:current-taxon model)
+               (:month-yr model)
+               (not (has-sightings-for-current-state? model)))
+      (.log js/console "doing the fetch for realz")
+      (js/d3.json (str "species/" (:current-taxon model) "/" (:month-yr model)) update-counties))))
+
+
+(defn watch-model
+  "When the model changes update the map"
+  [watch-name ref old new]
+  (.log js/console "month-yr changed: " (changed? :month-yr old new))
+  (.log js/console "current-taxon changed: " (changed? :current-taxon old new))
+  (if (or (changed? :current-taxon old new)
+          (changed? :month-yr old new))
+    (fetch-month-data)))
+
+(add-watch model ::model-watch watch-model)
 
 (def history (History.))
+
+(defn push-state [token]
+  (.setToken history (cs/replace token #"^#" ""))
+  (secretary/dispatch! token))
+
+(defroute "/" [] (swap! model assoc :current-taxon :nil :month-yr nil))
+
+(defroute taxon-month-path "/taxon/:order/:year/:month" [order year month]
+  (.log js/console "taxon-month-path" order year month)
+  ;; TODO: validate year and month
+  (swap! model assoc :current-taxon order :month-yr (str year "/" month)))
+
+(defroute taxon-path "/taxon/:order" [order]
+  (.log js/console "taxon-path")
+  (push-state (taxon-month-path {:order order, :year 2012, :month 12})))
+
 
 (secretary/set-config! :prefix "#")
 (events/listen history EventType.NAVIGATE
@@ -81,26 +114,6 @@
       (apply dom/ul
        (om/build-all species-item (:taxonomy model)
                      {:state (select-keys model [:current-taxon])})))))
-
-(defn changed? [key old new]
-  (not= (get old key) (get new key)))
-
-(defn watch-model
-  "When the model changes update the map"
-  [watch-name ref old new]
-  (.log js/console "month-yr changed: " (changed? :month-yr old new))
-  (.log js/console "current-taxon changed: " (changed? :current-taxon old new))
-  (if (or (changed? :current-taxon old new)
-          (changed? :month-yr old new))
-    (fetch-month-data)))
-
-(om/root species-list model {:target (.getElementById js/document "species")})
-(add-watch model ::model-watch watch-model)
-;; for debugging
-;; (om/root
-;;  ankha/inspector
-;;  model
-;;  {:target (js/document.getElementById "inspector")})
 
 
 ;;;;;;;;
@@ -174,22 +187,10 @@
        (.style "fill" freq-color)))
 
 (defn update-month [slide timestamp]
-  (let [date (new js/Date timestamp)
-        month-yr (str "/" (.getFullYear date) "/" (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString))))]
-    (when-not (= month-yr (:month-yr @model))
-      (swap! model assoc :month-yr month-yr))))
-
-(defn has-sightings-for-current-state? [model]
-  false)
-
-(defn fetch-month-data []
-  (.log js/console "fetch-month-data")
-  (let [model @model]
-    (when (and (:current-taxon model)
-               (:month-yr model)
-               (not (has-sightings-for-current-state? model)))
-      (.log js/console "doing the fetch for realz")
-      (js/d3.json (str "species/" (:current-taxon model) (:month-yr model)) update-counties))))
+  (let [date (new js/Date timestamp)]
+    (push-state (taxon-month-path {:order (:current-taxon @model)
+                                   :year  (.getFullYear date)
+                                   :month (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString)))}))))
 
 (defn plot [us]
   (-> svg
@@ -234,4 +235,13 @@
 (defn ^:export start-client []
   (get-birds)
   (draw-map)
+  (om/root species-list model {:target (.getElementById js/document "species")})
   (repl/connect "http://localhost:9000/repl"))
+
+
+
+;; for debugging
+;; (om/root
+;;  ankha/inspector
+;;  model
+;;  {:target (js/document.getElementById "inspector")})

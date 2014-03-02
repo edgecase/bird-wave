@@ -81,7 +81,9 @@ body {
   display: block;
 }
 
-#species li:hover, #species li.selected {
+#species li:hover,
+#species li.selected,
+#species li.selected a {
   background: #c7e9b4;
   color: #444;
 }
