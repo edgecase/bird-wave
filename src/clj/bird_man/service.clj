@@ -5,35 +5,14 @@
               [io.pedestal.service.http.route.definition :refer [defroutes]]
               [io.pedestal.service.interceptor :refer [defon-request]]
               [io.pedestal.service.log :as log]
-              [hiccup.page :as page]
-              [hiccup.form :as form]
+              [clojure.java.io :as io]
               [ring.util.response :as ring-resp]
               [ring.util.codec :as ring-codec]
               [datomic.api :as d :refer (q db)]))
 
 (defn home-page [request]
   (ring-resp/response
-    (page/html5
-      {:lang "en"}
-      [:head
-       [:meta {:charset "utf-8"}]
-       [:title "Frequency Map"]]
-      [:body
-       [:div#species]
-       [:div#map]
-       [:div#slider]
-       [:div#inspector]
-       (page/include-css "/stylesheets/main.css")
-       (page/include-css "/stylesheets/d3.slider.css")
-       (page/include-js "/javascript/goog/base.js")
-       (page/include-js "/javascript/d3.v3.js")
-       (page/include-js "/javascript/topojson.js")
-       (page/include-js "/javascript/client-dev.js")
-       (page/include-js "/javascript/colorbrewer.js")
-       (page/include-js "/javascript/d3.slider.js")
-       (page/include-js "http://fb.me/react-0.9.0.js")
-       [:script "goog.require('bird_man.client');"]
-       [:script "bird_man.client.start_client();"]])))
+   (slurp (io/resource "public/index.html"))))
 
 (defonce datomic-connection nil)
 

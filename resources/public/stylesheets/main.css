@@ -12,6 +12,10 @@ svg.d3-slider-axis text {
   fill: #ccc;
 }
 
+svg.d3-slider-axis-bottom {
+  top: 4px;
+}
+
 g.axis text {
   fill: #ccc;
   font-size: 12px;
@@ -45,10 +49,14 @@ body {
 #slider {
   width: 800px;
   margin-left: 100px;
+  height: 35px;
 }
 
 #slider input {
-  width: 100%;
+  position: relative;
+  width: 816px;
+  left: -10px;
+  top: 7px;
 }
 
 #species {

@@ -15,11 +15,7 @@
 (def svg-dim {:width 900 :height 600})
 (def key-dim {:width 10 :height 200})
 
-(def svg (-> js/d3
-             (.select "#map")
-             (.append "svg")
-             (.attr "height" (:height svg-dim))
-             (.attr "width" (:width svg-dim))))
+
 
 ;; (def slider ( -> js/d3
 ;;                  (.select "body")
@@ -47,6 +43,8 @@
 
 (defn has-sightings-for-current-state? [model]
   false)
+
+(declare update-counties)
 
 (defn fetch-month-data [model]
   (.log js/console "fetch-month-data")
@@ -111,7 +109,10 @@ Will only affect history if there is a species selected."
             classes (cs/join " " ["taxon" (if (= current-taxon this-taxon) "selected")])]
         (dom/li #js {:className classes}
           (dom/a #js {:href (taxon-path {:order this-taxon})
-                      :onClick (fn [e] (.preventDefault e) (update-location {:current-taxon this-taxon}))}
+                      :onClick (fn [e]
+                                 js/debugger
+                                 (.preventDevault e)
+                                 (update-location {:current-taxon this-taxon}))}
             (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
               sub-name
               (:taxon/common-name taxon))))))))
@@ -187,15 +188,6 @@ Will only affect history if there is a species selected."
 (defn freq-color [data]
   (color (freq-for-county data)))
 
-(defn select-bird [data]
-  (reset! current-taxon (aget data "taxon/order"))
-  ( -> js/d3
-       (.selectAll "#species ul li")
-       (.classed "selected" false))
-  ( -> js/d3
-       (.select (target))
-       (.classed "selected" true)))
-
 (defn list-birds [species]
   (swap! model assoc :taxonomy (map keywordize-keys (js->clj species))))
 
@@ -216,7 +208,7 @@ Will only affect history if there is a species selected."
                                    :year  (.getFullYear date)
                                    :month (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString)))}))))
 
-(defn plot [us]
+(defn plot [svg us]
   (-> svg
       (.append "g")
       (.selectAll "path")
@@ -254,16 +246,22 @@ Will only affect history if there is a species selected."
 
   )
 
-(defn draw-map []
-  (js/d3.json "data/us.json" plot))
+(defn draw-map [svg]
+  (js/d3.json "data/us.json"
+              #(plot svg %)))
 
 
 (defn ^:export start-client []
-  (get-birds)
-  (draw-map)
-  (om/root species-list model {:target (.getElementById js/document "species")})
-  (om/root date-slider model {:target (.getElementById js/document "slider")})
-  (repl/connect "http://localhost:9000/repl"))
+  (let [svg (-> js/d3
+                (.select "#map")
+                (.append "svg")
+                (.attr "height" (:height svg-dim))
+                (.attr "width" (:width svg-dim)))]
+    (get-birds)
+    (draw-map svg)
+    (om/root species-list model {:target (.getElementById js/document "species")})
+    (om/root date-slider model {:target (.getElementById js/document "date-input")})
+    (repl/connect "http://localhost:9000/repl")))
 
 
 
