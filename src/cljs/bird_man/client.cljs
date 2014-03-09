@@ -251,7 +251,7 @@ Will only affect history if there is a species selected."
               #(plot svg %)))
 
 
-(defn ^:export start-client []
+(defn ^:export start []
   (let [svg (-> js/d3
                 (.select "#map")
                 (.append "svg")
