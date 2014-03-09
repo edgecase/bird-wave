@@ -15,13 +15,6 @@
 (def svg-dim {:width 900 :height 600})
 (def key-dim {:width 10 :height 200})
 
-
-
-;; (def slider ( -> js/d3
-;;                  (.select "body")
-;;                  (.append "div")
-;;                  (.attr "id" "slider")))
-
 (def projection ( -> js/d3 (.geo.albersUsa)))
 (def path ( -> js/d3 (.geo.path projection)))
 
@@ -64,7 +57,7 @@
           (changed? :month-yr old new))
     (fetch-month-data new)))
 
-(add-watch model ::model-watch watch-model)
+;;;;;;;;;
 
 (def history (History.))
 
@@ -83,12 +76,6 @@
   (.log js/console "taxon-path")
   (push-state (taxon-month-path {:order order, :year 2012, :month 12})))
 
-
-(secretary/set-config! :prefix "#")
-(events/listen history EventType.NAVIGATE
-  (fn [e] (secretary/dispatch! (.-token e))))
-
-(.setEnabled history true)
 
 (defn update-location
   "Use this function when one of the controls (species or time) changes.
@@ -203,7 +190,7 @@ Will only affect history if there is a species selected."
   (let [date (new js/Date timestamp)]
     (push-state (taxon-month-path {:order (:current-taxon @model)
                                    :year  (.getFullYear date)
-                                   :month (goog.string.format "%02d" (-> (.getMonth date) (inc) (.toString)))}))))
+                                   :month (goog.string.format "%02d" (-> (.getMonth date) (inc) (.to String)))}))))
 
 (defn plot [svg us]
   (-> svg
@@ -232,16 +219,7 @@ Will only affect history if there is a species selected."
       (.attr "width" 8)
       (.attr "y" #(key-scale (nth % 1)))
       (.style "fill" #(nth (.range color) %2)))
-  (-> key-g (.call key-axis))
-  ;; ( -> slider
-  ;;      (.call (-> (js/d3.slider)
-  ;;                 (.axis true)
-  ;;                 (.scale months)
-  ;;                 (.tickFormat (js/d3.time.format "%B"))
-  ;;                 (.step (* 1000 60 60 24))
-  ;;                 (.on "slide" (debounce update-month 500 false)))))
-
-  )
+  (-> key-g (.call key-axis)))
 
 (defn draw-map [svg]
   (js/d3.json "data/us.json"
@@ -254,6 +232,13 @@ Will only affect history if there is a species selected."
                 (.append "svg")
                 (.attr "height" (:height svg-dim))
                 (.attr "width" (:width svg-dim)))]
+
+    (add-watch model ::model-watch watch-model)
+    (secretary/set-config! :prefix "#")
+    (events/listen history EventType.NAVIGATE
+                   (fn [e] (secretary/dispatch! (.-token e))))
+    (.setEnabled history true)
+
     (get-birds)
     (draw-map svg)
     (om/root species-list model {:target (.getElementById js/document "species")})
