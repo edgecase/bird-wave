@@ -110,9 +110,8 @@ Will only affect history if there is a species selected."
         (dom/li #js {:className classes}
           (dom/a #js {:href (taxon-path {:order this-taxon})
                       :onClick (fn [e]
-                                 js/debugger
-                                 (.preventDevault e)
-                                 (update-location {:current-taxon this-taxon}))}
+                                 (update-location {:current-taxon this-taxon})
+                                 false)}
             (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
               sub-name
               (:taxon/common-name taxon))))))))
@@ -137,10 +136,8 @@ Will only affect history if there is a species selected."
                   0)]
         (dom/input
          #js {:type "range", :min 0, :max 12, :value val
-              :onChange (fn [e]
-                          (.preventDefault e)
-                          (update-location
-                           {:month-yr (get dates (js/parseInt (.. e -target -value)))}))})))))
+              :onChange #(update-location
+                          {:month-yr (get dates (js/parseInt (.. % -target -value)))})})))))
 ;;;;;;;;
 
 
