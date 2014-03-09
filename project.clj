@@ -25,10 +25,11 @@
     :builds [{
       :source-paths ["src/cljs"]
       :compiler {
-        :externs ["externs/d3_externs_min.js" "externs/topojson.js"]
         :output-to "resources/public/javascript/client-dev.js"
         :optimizations :whitespace
-        :pretty-print true}}]}
+        :pretty-print true
+        :preamble ["react/react.js"]
+        :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}]}
 
   :min-lein-version "2.0.0"
   :jvm-opts ["-Xmx2g"]
