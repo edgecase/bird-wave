@@ -107,7 +107,7 @@ Will only affect history if there is a species selected."
   (reify
     om/IRender
     (render [this]
-      (apply dom/ul
+      (apply dom/ul #js {}
        (om/build-all species-item (:taxonomy model)
                      {:state (select-keys model [:current-taxon])})))))
 
