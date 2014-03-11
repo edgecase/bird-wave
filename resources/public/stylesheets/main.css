@@ -12,6 +12,10 @@ svg.d3-slider-axis text {
   fill: #ccc;
 }
 
+svg.d3-slider-axis-bottom {
+  top: 4px;
+}
+
 g.axis text {
   fill: #ccc;
   font-size: 12px;
@@ -45,6 +49,14 @@ body {
 #slider {
   width: 800px;
   margin-left: 100px;
+  height: 35px;
+}
+
+#slider input {
+  position: relative;
+  width: 816px;
+  left: -10px;
+  top: 7px;
 }
 
 #species {
@@ -72,10 +84,22 @@ body {
   margin: 2px;
   padding: 2px;
   border-bottom: 1px solid #ccc;
-  cursor: pointer;
 }
 
-#species li:hover, #species li.selected {
+#species li a {
+  color: #eee;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#species li:hover a,
+#species li.selected a {
   background: #c7e9b4;
   color: #444;
+}
+
+/* for debugging */
+#inspector {
+  background-color: white;
 }

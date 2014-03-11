@@ -13,17 +13,23 @@
                  [io.pedestal/pedestal.jetty "0.2.2"]
                  [com.novemberain/validateur "1.5.0"]
                  [criterium "0.4.3"]
-                 [org.clojure/clojurescript "0.0-2156"]]
-  :plugins      [[lein-cljsbuild "1.0.2"]]
+                 [org.clojure/clojurescript "0.0-2173"]
+                 [om "0.5.2"]
+                 [secretary "1.0.1"]
+                 [datomic-schema-grapher "0.0.1"]
+                 [ankha "0.1.1"]]
+  :plugins      [[lein-cljsbuild "1.0.2"]
+                 [datomic-schema-grapher "0.0.1"]]
   :source-paths ["src/clj"]
   :cljsbuild {
     :builds [{
       :source-paths ["src/cljs"]
       :compiler {
-        :externs ["externs/d3_externs_min.js" "externs/topojson.js"]
         :output-to "resources/public/javascript/client-dev.js"
-        :output-dir "resources/public/javascript"
-        :optimizations :none}}]}
+        :optimizations :whitespace
+        :pretty-print true
+        :preamble ["react/react.js"]
+        :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}]}
 
   :min-lein-version "2.0.0"
   :jvm-opts ["-Xmx2g"]
