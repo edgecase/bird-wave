@@ -7,7 +7,7 @@
                  [io.pedestal/pedestal.service "0.2.2"]
                  [io.pedestal/pedestal.service-tools "0.2.2"]
                  [hiccup "1.0.5"]
-                 [com.datomic/datomic-pro "0.9.4470" :exclusions [org.slf4j/slf4j-nop]]
+                 [com.datomic/datomic-pro "0.9.4609" :exclusions [org.slf4j/slf4j-nop]]
                  [org.clojure/tools.namespace "0.2.4"]
                  [enlive "1.1.4"]
                  [io.pedestal/pedestal.jetty "0.2.2"]
