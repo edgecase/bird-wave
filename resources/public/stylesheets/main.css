@@ -1,11 +1,19 @@
-svg .states {
+svg .background {
+  fill: none;
+  stroke: #555;
+  pointer-events: all;
+}
+
+svg .state {
   fill: none;
   stroke: #555;
   stroke-linejoin: round;
+  pointer-events: all;
 }
 
 svg .county {
   fill: #081d58;
+  pointer-events: none;
 }
 
 svg.d3-slider-axis text {
@@ -63,7 +71,7 @@ body {
   position: absolute;
   top: 0px;
   right: 0px;
-  height: 600px;
+  max-height: 600px;
   width: 200px;
   overflow-x: hidden;
   overflow-y: scroll;

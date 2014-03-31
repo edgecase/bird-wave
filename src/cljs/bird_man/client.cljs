@@ -11,23 +11,59 @@
   (:import goog.History
            goog.history.EventType))
 
-(def svg-dim {:width 900 :height 600})
+(def svg-dim {:width 900 :height 560})
+(def max-freq 5)
 (def key-dim {:width 10 :height 200})
-
-(def projection ( -> js/d3 (.geo.albersUsa)))
-(def path ( -> js/d3 (.geo.path projection)))
+(def projection ( -> js/d3 (.geo.albersUsa) (.scale 1000) (.translate (array (/ (:width svg-dim) 2) (/ (:height svg-dim) 2)))))
+(def path ( -> js/d3 (.geo.path) (.projection projection)))
+(def color ( -> js/d3.scale
+                (.quantile)
+                (.domain (array 0 max-freq))
+                (.range (-> (aget js/colorbrewer.YlGnBu "9") (.reverse)))))
+(def months ( -> (js/d3.time.scale)
+                 (.domain (array (new js/Date 2012 11) (new js/Date 2013 11)))))
+(def key-scale ( -> js/d3.scale
+                    (.linear)
+                    (.domain (array max-freq 0))
+                    (.range (array 0 (:height key-dim)))))
+(def key-axis ( -> (js/d3.svg.axis)
+                   (.scale key-scale)
+                   (.orient "left")
+                   (.tickValues (color.quantiles))
+                   (.tickFormat (js/d3.format ".1f"))))
+(defn handle-zoom []
+  (-> js/d3
+      (.selectAll "g.topo")
+      (.style "stroke-width" (str (/ 1.5 (aget js/d3 "event" "scale")) "px"))
+      (.attr "transform" (str "translate(" (aget js/d3 "event" "translate") ") scale(" (aget js/d3 "event" "scale") ")"))))
+(def zoom ( -> js/d3.behavior
+               (.zoom)
+               (.translate (array 0 0))
+               (.scale 1)
+               (.scaleExtent (array 1 8))
+               (.on "zoom" handle-zoom)))
 
 (defonce freq-by-county (atom {}))
 (defn target [] (.-target (.-event js/d3)))
-
-;;;;;;;;
+(defn state-to-activate [] (.select js/d3 (target)))
+(defn active-state [] (.select js/d3 ".active"))
+(defn active-attrs [el]
+  (let [bounds (.bounds path el)
+        width (:width svg-dim)
+        height (:height svg-dim)
+        dx (- (aget bounds 1 0) (aget bounds 0 0))
+        dy (- (aget bounds 1 1) (aget bounds 0 1))
+        x  (/ (+ (aget bounds 0 0) (aget bounds 1 0)) 2)
+        y  (/ (+ (aget bounds 0 1) (aget bounds 1 1)) 2)
+        scale (/ 0.9 (js/Math.max (/ dx width) (/ dy height)))
+        translate (array (- (/ width 2) (* scale x)) (- (/ height 2) (* scale y)))]
+    {:scale scale :translate translate}))
 
 (def model (atom {:current-taxon nil
                   :month-yr nil     ; selected month
                   :taxonomy []      ; all taxons
                   :sightings {}     ; sightings for selected taxon, grouped by month-yr
                   }))
-
 
 (defn changed? [key old new]
   (.log js/console (name key) (key old) (key new))
@@ -46,7 +82,6 @@
     (.log js/console "doing the fetch for realz")
     (js/d3.json (str "species/" (:current-taxon model) "/" (:month-yr model)) update-counties)))
 
-
 (defn watch-model
   "When the model changes update the map"
   [watch-name ref old new]
@@ -56,7 +91,6 @@
           (changed? :month-yr old new))
     (fetch-month-data new)))
 
-;;;;;;;;;
 
 (def history (History.))
 
@@ -110,6 +144,7 @@ Will only affect history if there is a species selected."
        (om/build-all species-item (:taxonomy model)
                      {:state (select-keys model [:current-taxon])})))))
 
+
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11" "2013/12"])
 
@@ -124,7 +159,6 @@ Will only affect history if there is a species selected."
          #js {:type "range", :min 0, :max 12, :value val
               :onChange #(update-location
                           {:month-yr (get dates (js/parseInt (.. % -target -value)))})})))))
-;;;;;;;;
 
 
 (defn build-key [state county]
@@ -149,25 +183,6 @@ Will only affect history if there is a species selected."
 (defn freq-duration [data]
   (+ (* 250 (freq-for-county data)) 200))
 
-(def color ( -> js/d3.scale
-                (.quantile)
-                (.domain (array 0 5))
-                (.range (-> (aget js/colorbrewer.YlGnBu "9") (.reverse)))))
-
-(def months ( -> (js/d3.time.scale)
-                 (.domain (array (new js/Date 2012 11) (new js/Date 2013 11)))))
-
-(def key-scale ( -> js/d3.scale
-                    (.linear)
-                    (.domain (array 5 0))
-                    (.range (array 0 (:height key-dim)))))
-
-(def key-axis ( -> (js/d3.svg.axis)
-                   (.scale key-scale)
-                   (.orient "left")
-                   (.tickValues (color.quantiles))
-                   (.tickFormat (js/d3.format ".1f"))))
-
 (defn freq-color [data]
   (color (freq-for-county data)))
 
@@ -191,24 +206,66 @@ Will only affect history if there is a species selected."
                                    :year  (.getFullYear date)
                                    :month (goog.string.format "%02d" (-> (.getMonth date) (inc) (.to String)))}))))
 
+(defn reset [svg]
+  (.classed (active-state) "active" false)
+  (-> svg
+      (.transition)
+      (.duration 750)
+      (.call (.-event (-> zoom
+                          (.translate (array 0 0))
+                          (.scale 1))))))
+
+(defn zoom-state [svg state]
+  (let [zoom-attrs (active-attrs state)]
+    (if (= (.node (state-to-activate)) (.node (active-state)))
+      (reset svg)
+      (do
+        (.classed (active-state) "active" false)
+        (.classed (state-to-activate) "active" true)
+        (-> svg
+            (.transition)
+            (.duration 750)
+            (.call (.-event (-> zoom
+                                (.translate (:translate zoom-attrs))
+                                (.scale (:scale zoom-attrs))))))))))
+
+(defn prevent-zoom-on-drag []
+  (let [e (.-event js/d3)]
+    (when (.-defaultPrevented e) (.stopPropagation e))))
+
 (defn plot [svg us]
   (-> svg
+      (.append "rect")
+      (.classed "background" true)
+      (.attr "width" (:width svg-dim))
+      (.attr "height" (:height svg-dim))
+      (.on "click" #(reset svg)))
+  (-> svg
       (.append "g")
+      (.classed "topo" true)
       (.selectAll "path")
-      (.data (aget (js/topojson.feature us (aget us "objects" "counties") #(not (= %1 %2))) "features"))
+      (.data (aget (js/topojson.feature us (aget us "objects" "counties")) "features"))
       (.enter)
       (.append "path")
       (.classed "county" true)
       (.attr "d" path))
-  ( -> svg
-       (.append "path")
-       (.datum (js/topojson.mesh us (aget us "objects" "states")))
-       (.classed "states" true)
-       (.attr "d" path))
+  (-> svg
+      (.append "g")
+      (.classed "topo" true)
+      (.selectAll "path")
+      (.data (aget (js/topojson.feature us (aget us "objects" "states")) "features"))
+      (.enter)
+      (.append "path")
+      (.classed "state" true)
+      (.attr "d" path)
+      (.on "click" #(zoom-state svg %)))
+  (-> svg
+      (.call zoom)
+      (.call (.-event zoom)))
   (def key-g ( -> svg
                   (.append "g")
                   (.classed "axis" true)
-                  (.attr "transform", (str "translate(" (- (:width svg-dim) (:width key-dim)) "," (/ (:height svg-dim) 1.5) ")"))))
+                  (.attr "transform", (str "translate(" (- (:width svg-dim) (:width key-dim)) "," (/ (:height svg-dim) 1.6) ")"))))
   (-> key-g
       (.selectAll "rect")
       (.data (-> (.range color) (.map #(.invertExtent color %))))
@@ -230,7 +287,8 @@ Will only affect history if there is a species selected."
                 (.select "#map")
                 (.append "svg")
                 (.attr "height" (:height svg-dim))
-                (.attr "width" (:width svg-dim)))]
+                (.attr "width" (:width svg-dim))
+                (.on "click" prevent-zoom-on-drag true))]
 
     (add-watch model ::model-watch watch-model)
     (secretary/set-config! :prefix "#")
@@ -238,8 +296,8 @@ Will only affect history if there is a species selected."
                    (fn [e] (secretary/dispatch! (.-token e))))
     (.setEnabled history true)
 
-    (get-birds)
     (draw-map svg)
+    (get-birds)
     (om/root species-list model {:target (.getElementById js/document "species")})
     (om/root date-slider model {:target (.getElementById js/document "date-input")})
     (repl/connect "http://localhost:9000/repl")))
