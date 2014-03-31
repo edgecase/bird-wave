@@ -3,7 +3,6 @@
             [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
-            [bird-man.util :refer (debounce)]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [secretary.core :as secretary :include-macros true :refer [defroute]]
