@@ -21,7 +21,11 @@
                 (.domain (array 0 max-freq))
                 (.range (-> (aget js/colorbrewer.YlGnBu "9") (.reverse)))))
 (def months ( -> (js/d3.time.scale)
-                 (.domain (array (new js/Date 2012 11) (new js/Date 2013 11)))))
+                 (.domain (array (new js/Date 2012 10 15) (new js/Date 2013 10 15)))
+                 (.range (array 0 (:width svg-dim)))))
+(def month-axis (-> (js/d3.svg.axis)
+                    (.scale months)
+                    (.tickFormat (js/d3.time.format "%B"))))
 (def key-scale ( -> js/d3.scale
                     (.linear)
                     (.domain (array max-freq 0))
@@ -34,7 +38,7 @@
 (defn handle-zoom []
   (-> js/d3
       (.selectAll "g.topo")
-      (.style "stroke-width" (str (/ 1.5 (aget js/d3 "event" "scale")) "px"))
+      (.style "stroke-width" (str (/ 1.3 (aget js/d3 "event" "scale")) "px"))
       (.attr "transform" (str "translate(" (aget js/d3 "event" "translate") ") scale(" (aget js/d3 "event" "scale") ")"))))
 (def zoom ( -> js/d3.behavior
                (.zoom)
@@ -146,7 +150,7 @@ Will only affect history if there is a species selected."
 
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
-                "2013/07" "2013/08" "2013/09" "2013/10" "2013/11" "2013/12"])
+                "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 
 (defn date-slider [model owner]
   (reify
@@ -156,7 +160,7 @@ Will only affect history if there is a species selected."
                   (.indexOf dates date)
                   0)]
         (dom/input
-         #js {:type "range", :min 0, :max 12, :value val
+         #js {:type "range", :min 0, :max 11, :value val
               :onChange #(update-location
                           {:month-yr (get dates (js/parseInt (.. % -target -value)))})})))))
 
@@ -234,48 +238,52 @@ Will only affect history if there is a species selected."
     (when (.-defaultPrevented e) (.stopPropagation e))))
 
 (defn plot [svg us]
-  (-> svg
-      (.append "rect")
-      (.classed "background" true)
-      (.attr "width" (:width svg-dim))
-      (.attr "height" (:height svg-dim))
-      (.on "click" #(reset svg)))
-  (-> svg
-      (.append "g")
-      (.classed "topo" true)
-      (.selectAll "path")
-      (.data (aget (js/topojson.feature us (aget us "objects" "counties")) "features"))
-      (.enter)
-      (.append "path")
-      (.classed "county" true)
-      (.attr "d" path))
-  (-> svg
-      (.append "g")
-      (.classed "topo" true)
-      (.selectAll "path")
-      (.data (aget (js/topojson.feature us (aget us "objects" "states")) "features"))
-      (.enter)
-      (.append "path")
-      (.classed "state" true)
-      (.attr "d" path)
-      (.on "click" #(zoom-state svg %)))
-  (-> svg
-      (.call zoom)
-      (.call (.-event zoom)))
-  (def key-g ( -> svg
+  (let [s-width (:width svg-dim)
+        s-height (:height svg-dim)
+        k-width (:width key-dim)
+        k-height (:height key-dim)
+        key-g (-> svg
                   (.append "g")
                   (.classed "axis" true)
-                  (.attr "transform", (str "translate(" (- (:width svg-dim) (:width key-dim)) "," (/ (:height svg-dim) 1.6) ")"))))
-  (-> key-g
-      (.selectAll "rect")
-      (.data (-> (.range color) (.map #(.invertExtent color %))))
-      (.enter)
-      (.append "rect")
-      (.attr "height" #(- (:height key-dim) (key-scale (- (nth % 1) (nth % 0)))))
-      (.attr "width" 8)
-      (.attr "y" #(key-scale (nth % 1)))
-      (.style "fill" #(nth (.range color) %2)))
-  (-> key-g (.call key-axis)))
+                  (.attr "transform", (str "translate(" (- s-width k-width) "," (/ s-height 1.6) ")")))]
+    (-> svg
+        (.append "rect")
+        (.classed "background" true)
+        (.attr "width" s-width)
+        (.attr "height" s-height)
+        (.on "click" #(reset svg)))
+    (-> svg
+        (.append "g")
+        (.classed "topo" true)
+        (.selectAll "path")
+        (.data (aget (js/topojson.feature us (aget us "objects" "counties")) "features"))
+        (.enter)
+        (.append "path")
+        (.classed "county" true)
+        (.attr "d" path))
+    (-> svg
+        (.append "g")
+        (.classed "topo" true)
+        (.selectAll "path")
+        (.data (aget (js/topojson.feature us (aget us "objects" "states")) "features"))
+        (.enter)
+        (.append "path")
+        (.classed "state" true)
+        (.attr "d" path)
+        (.on "click" #(zoom-state svg %)))
+    (-> svg
+        (.call zoom)
+        (.call (.-event zoom)))
+    (-> key-g
+        (.selectAll "rect")
+        (.data (-> (.range color) (.map #(.invertExtent color %))))
+        (.enter)
+        (.append "rect")
+        (.attr "height" #(- k-height (key-scale (- (nth % 1) (nth % 0)))))
+        (.attr "width" 8)
+        (.attr "y" #(key-scale (nth % 1)))
+        (.style "fill" #(nth (.range color) %2)))
+    (-> key-g (.call key-axis))))
 
 (defn draw-map [svg]
   (js/d3.json "data/us.json"
@@ -288,7 +296,13 @@ Will only affect history if there is a species selected."
                 (.append "svg")
                 (.attr "height" (:height svg-dim))
                 (.attr "width" (:width svg-dim))
-                (.on "click" prevent-zoom-on-drag true))]
+                (.on "click" prevent-zoom-on-drag true))
+        slider (-> js/d3
+                   (.select "#slider")
+                   (.append "svg")
+                   (.append "g")
+                   (.classed "axis" true)
+                   (.call month-axis))]
 
     (add-watch model ::model-watch watch-model)
     (secretary/set-config! :prefix "#")

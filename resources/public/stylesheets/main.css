@@ -16,14 +16,6 @@ svg .county {
   pointer-events: none;
 }
 
-svg.d3-slider-axis text {
-  fill: #ccc;
-}
-
-svg.d3-slider-axis-bottom {
-  top: 4px;
-}
-
 g.axis text {
   fill: #ccc;
   font-size: 12px;
@@ -55,16 +47,25 @@ body {
 }
 
 #slider {
-  width: 800px;
-  margin-left: 100px;
+  margin-left: 25px;
   height: 35px;
+  width: 900px;
 }
 
-#slider input {
+#slider svg {
+  z-index: -10;
+}
+
+#date-input {
   position: relative;
-  width: 816px;
-  left: -10px;
-  top: 7px;
+  top: 8px;
+  width: 840px;
+  margin: auto;
+}
+
+#date-input input {
+  width: 100%;
+  left: -2px;
 }
 
 #species {
