@@ -111,7 +111,6 @@ label[for=map] {
   width: 800px;
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
-  background-color: #999;
   opacity: 0.9;
 }
 
@@ -130,7 +129,6 @@ label[for=map] {
 
 #date-input {
   position: relative;
-  top: 8px;
   width: 735px;
   margin: auto;
 }
@@ -145,12 +143,12 @@ label[for=map] {
   position: absolute;
   top: 0px;
   right: 0px;
-  max-height: 553px;
+  max-height: 550px;
   width: 200px;
   overflow-x: hidden;
   overflow-y: scroll;
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+  border-radius: 2px;
+  border-radius: 2px;
   background: #081d58;
   opacity: 0.8;
 }
