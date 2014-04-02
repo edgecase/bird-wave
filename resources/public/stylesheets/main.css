@@ -84,7 +84,6 @@ header h1 {
 
 label.component-label {
   position: absolute;
-  top: 0px;
   width: 150px;
   background: #7fcdbb;
   color: white;
@@ -94,10 +93,17 @@ label.component-label {
 }
 
 label[for=species] {
+  top: 0px;
   right: -160px;
 }
 
 label[for=slider] {
+  top: 0px;
+  left: -160px;
+}
+
+label[for=map] {
+  top: 500px;
   left: -160px;
 }
 
