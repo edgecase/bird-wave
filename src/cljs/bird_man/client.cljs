@@ -119,7 +119,7 @@
 Will only affect history if there is a species selected."
   [changes]
   (let [model @model
-        month-yr (get changes :month-yr (get model :month-yr "2012/12"))
+        month-yr (get changes :month-yr (or (:month-yr model) "2012/12"))
         taxon (get changes :current-taxon (:current-taxon model))
         [_ year month] (re-find #"(\d{4})/(\d{2})" month-yr)]
     (if taxon
@@ -191,7 +191,13 @@ Will only affect history if there is a species selected."
   (color (freq-for-county data)))
 
 (defn list-birds [species]
-  (swap! model assoc :taxonomy (map keywordize-keys (js->clj species))))
+  (let [mdl @model
+        taxonomy (map keywordize-keys (js->clj species))
+        taxon (or (:current-taxon mdl) (:taxon/order (rand-nth taxonomy)))
+        month-yr (or (:month-yr mdl) "2012/12")]
+    (.log js/console taxon month-yr)
+    (swap! model assoc :taxonomy taxonomy)
+    (update-location {:current-taxon taxon :month-yr month-yr})))
 
 (defn get-birds []
   (js/d3.json "species" list-birds))
