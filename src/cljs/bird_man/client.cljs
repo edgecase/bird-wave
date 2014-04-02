@@ -146,7 +146,7 @@ Will only affect history if there is a species selected."
       (let [node (om/get-node (.-owner this))
             classes (.-classList node)]
         (when (.contains classes "selected")
-          (.scrollIntoView node))))))
+          (.scrollIntoView node false))))))
 
 (defn species-list [model owner]
   (reify
