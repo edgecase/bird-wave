@@ -11,10 +11,12 @@
   (:import goog.History
            goog.history.EventType))
 
-(def svg-dim {:width 900 :height 560})
-(def max-freq 5)
+(def svg-dim {:width 800 :height 500})
 (def key-dim {:width 10 :height 200})
-(def projection ( -> js/d3 (.geo.albersUsa) (.scale 1000) (.translate (array (/ (:width svg-dim) 2) (/ (:height svg-dim) 2)))))
+(def key-bg-dim {:width 45 :height 210})
+(def max-freq 5)
+(def zoom-duration 550)
+(def projection ( -> js/d3 (.geo.albersUsa) (.scale 940) (.translate (array (+ 10 (/ (:width svg-dim) 2)) (/ (:height svg-dim) 2)))))
 (def path ( -> js/d3 (.geo.path) (.projection projection)))
 (def color ( -> js/d3.scale
                 (.quantile)
@@ -22,7 +24,7 @@
                 (.range (-> (aget js/colorbrewer.YlGnBu "9") (.reverse)))))
 (def months ( -> (js/d3.time.scale)
                  (.domain (array (new js/Date 2012 10 15) (new js/Date 2013 10 15)))
-                 (.range (array 0 (:width svg-dim)))))
+                 (.range (array 0 (- (:width svg-dim) 10)))))
 (def month-axis (-> (js/d3.svg.axis)
                     (.scale months)
                     (.tickFormat (js/d3.time.format "%B"))))
@@ -38,7 +40,7 @@
 (defn handle-zoom []
   (-> js/d3
       (.selectAll "g.topo")
-      (.style "stroke-width" (str (/ 1.3 (aget js/d3 "event" "scale")) "px"))
+      (.style "stroke-width" (str (/ 1.2 (aget js/d3 "event" "scale")) "px"))
       (.attr "transform" (str "translate(" (aget js/d3 "event" "translate") ") scale(" (aget js/d3 "event" "scale") ")"))))
 (def zoom ( -> js/d3.behavior
                (.zoom)
@@ -191,7 +193,7 @@ Will only affect history if there is a species selected."
   (if freq freq 0.0)))
 
 (defn freq-duration [data]
-  (+ (* 250 (freq-for-county data)) 200))
+  (+ (* 100 (freq-for-county data)) 200))
 
 (defn freq-color [data]
   (color (freq-for-county data)))
@@ -214,19 +216,14 @@ Will only affect history if there is a species selected."
        (.selectAll "path.county")
        (.transition)
        (.duration freq-duration)
-       (.style "fill" freq-color)))
-
-(defn update-month [slide timestamp]
-  (let [date (new js/Date timestamp)]
-    (push-state (taxon-month-path {:order (:current-taxon @model)
-                                   :year  (.getFullYear date)
-                                   :month (goog.string.format "%02d" (-> (.getMonth date) (inc) (.to String)))}))))
+       (.style "fill" freq-color)
+       (.style "stroke" freq-color)))
 
 (defn reset [svg]
   (.classed (active-state) "active" false)
   (-> svg
       (.transition)
-      (.duration 750)
+      (.duration zoom-duration)
       (.call (.-event (-> zoom
                           (.translate (array 0 0))
                           (.scale 1))))))
@@ -240,7 +237,7 @@ Will only affect history if there is a species selected."
         (.classed (state-to-activate) "active" true)
         (-> svg
             (.transition)
-            (.duration 750)
+            (.duration zoom-duration)
             (.call (.-event (-> zoom
                                 (.translate (:translate zoom-attrs))
                                 (.scale (:scale zoom-attrs))))))))))
@@ -254,10 +251,8 @@ Will only affect history if there is a species selected."
         s-height (:height svg-dim)
         k-width (:width key-dim)
         k-height (:height key-dim)
-        key-g (-> svg
-                  (.append "g")
-                  (.classed "axis" true)
-                  (.attr "transform", (str "translate(" (- s-width k-width) "," (/ s-height 1.6) ")")))]
+        b-width (:width key-bg-dim)
+        b-height (:height key-bg-dim)]
     (-> svg
         (.append "rect")
         (.classed "background" true)
@@ -286,7 +281,24 @@ Will only affect history if there is a species selected."
     (-> svg
         (.call zoom)
         (.call (.-event zoom)))
-    (-> key-g
+    (-> svg
+        (.append "rect")
+        (.classed "axis-background" true)
+        (.attr "width" b-width)
+        (.attr "height" b-height)
+        (.attr "rx" 4)
+        (.attr "ry" 4)
+        (.attr "transform", (str "translate(" (- s-width b-width 5) "," (- s-height b-height) ")")))
+    (-> svg
+        (.append "text")
+        (.classed "legend" true)
+        (.text "Scale represents the ratio of birds sighted to number of sightings")
+        (.attr "transform", (str "translate(" (- s-width 390) "," (- s-height 5) ")")))
+    (-> svg
+        (.append "g")
+        (.classed "axis" true)
+        (.call key-axis)
+        (.attr "transform", (str "translate(" (- s-width k-width 10) "," (- s-height k-height 5) ")"))
         (.selectAll "rect")
         (.data (-> (.range color) (.map #(.invertExtent color %))))
         (.enter)
@@ -294,8 +306,7 @@ Will only affect history if there is a species selected."
         (.attr "height" #(- k-height (key-scale (- (nth % 1) (nth % 0)))))
         (.attr "width" 8)
         (.attr "y" #(key-scale (nth % 1)))
-        (.style "fill" #(nth (.range color) %2)))
-    (-> key-g (.call key-axis))))
+        (.style "fill" #(nth (.range color) %2)))))
 
 (defn draw-map [svg]
   (js/d3.json "data/us.json"
