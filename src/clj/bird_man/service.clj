@@ -16,6 +16,9 @@
 
 (defonce datomic-connection nil)
 
+(defn connect-datomic [uri]
+  (alter-var-root #'datomic-connection (constantly (d/connect uri))))
+
 (defn add-datomic-conn [request]
   (assoc request :datomic-conn datomic-connection))
 

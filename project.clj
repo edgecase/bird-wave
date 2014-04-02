@@ -7,10 +7,9 @@
                  [io.pedestal/pedestal.service "0.2.2"]
                  [io.pedestal/pedestal.service-tools "0.2.2"]
                  [hiccup "1.0.5"]
-                 [com.datomic/datomic-pro "0.9.4470" :exclusions [org.slf4j/slf4j-nop]]
+                 [com.datomic/datomic-pro "0.9.4609" :exclusions [org.slf4j/slf4j-nop]]
                  [org.clojure/tools.namespace "0.2.4"]
                  [enlive "1.1.4"]
-                 [io.pedestal/pedestal.jetty "0.2.2"]
                  [com.novemberain/validateur "1.5.0"]
                  [criterium "0.4.3"]
                  [org.clojure/clojurescript "0.0-2173"]
@@ -19,20 +18,26 @@
                  [datomic-schema-grapher "0.0.1"]
                  [ankha "0.1.1"]]
   :plugins      [[lein-cljsbuild "1.0.2"]
-                 [datomic-schema-grapher "0.0.1"]]
+                 [datomic-schema-grapher "0.0.1"]
+                 [ohpauleez/lein-pedestal "0.1.0-beta10"]]
   :source-paths ["src/clj"]
-  :cljsbuild {
-    :builds [{
-      :source-paths ["src/cljs"]
-      :compiler {
-        :output-to "resources/public/javascript/client-dev.js"
+  :hooks [leiningen.cljsbuild]
+  :cljsbuild
+    {:builds
+     {:dev
+      {:source-paths ["src/cljs"]
+       :compiler
+       {:output-to "resources/public/javascript/client-dev.js"
         :optimizations :whitespace
         :pretty-print true
         :preamble ["react/react.js"]
-        :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}]}
+        :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}}}
 
   :min-lein-version "2.0.0"
-  :jvm-opts ["-Xmx2g"]
   :resource-paths ["config", "resources"]
   :aliases {"run-dev" ["trampoline" "run" "-m" "bird-man.server/run-dev"]}
-  :profiles {:dev {:source-paths ["dev"]}})
+  :profiles {:dev {:dependencies [[io.pedestal/pedestal.jetty "0.2.2"]]
+                   :source-paths ["dev"]}}
+
+  :pedestal {:server-ns "bird-man.server"
+             :url-pattern "/*"})

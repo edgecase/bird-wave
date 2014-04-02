@@ -25,3 +25,5 @@ repl/clojure/browser/repl.cljs
 repl/clojure/browser/repl.js
 /.lein-classpath
 /checkouts
+/sample_data/birds-full.txt
+/pom.xml
