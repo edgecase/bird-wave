@@ -13,7 +13,7 @@
             bird-man.database))
 
 (defonce system (atom nil))
-(defonce config (atom {:seed-file "resources/sample_data/birds.txt"
+(defonce config (atom {:seed-file "sample_data/birds.txt"
                        :transactor :mem
                        :batch-size 1000
                        :skip-rows nil
