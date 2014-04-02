@@ -138,7 +138,13 @@ Will only affect history if there is a species selected."
                                  false)}
             (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
               sub-name
-              (:taxon/common-name taxon))))))))
+              (:taxon/common-name taxon))))))
+    om/IDidMount
+    (did-mount [this]
+      (let [node (om/get-node (.-owner this))
+            classes (.-classList node)]
+        (when (.contains classes "selected")
+          (.scrollIntoView node))))))
 
 (defn species-list [model owner]
   (reify
