@@ -54,6 +54,9 @@
               taxon
               year-month) ))))
 
+(defn am-i-alive [request]
+  (ring-resp/response "OK"))
+
 (defroutes routes
   [[["/" {:get home-page}
      ;; Set default interceptors for /about and any other paths under /
@@ -62,7 +65,8 @@
        ^:interceptors [bootstrap/json-body]
       ["/:taxon/:year-month"
        ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
-       {:get countywise-frequencies}]]]]])
+       {:get countywise-frequencies}]]]
+    ["/health-check" {:get am-i-alive}]]])
 
 ;; Consumed by bird-man.server/create-server
 ;; See bootstrap/default-interceptors for additional options you can configure
