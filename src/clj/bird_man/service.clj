@@ -3,7 +3,7 @@
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
               [io.pedestal.service.http.route.definition :refer [defroutes]]
-              [io.pedestal.service.interceptor :refer [defon-request]]
+              [io.pedestal.service.interceptor :refer [defon-request defon-response]]
               [io.pedestal.service.log :as log]
               [clojure.java.io :as io]
               [ring.util.response :as ring-resp]
@@ -25,6 +25,17 @@
 (defon-request datomic-conn
   "Add a conn reference to each request"
   add-datomic-conn)
+
+;Cache-Control: public, must-revalidate, max-age=2592000
+(defn add-cache-header
+  [{:keys [status headers] :as response}]
+  (if (= 200 status)
+    (assoc-in response [:headers "Cache-Control"] "public, max-age=99000000")
+    response))
+
+(defon-response cacheable
+  "Add a conn reference to each request"
+  add-cache-header)
 
 (defn species-index [{conn :datomic-conn :as request}]
   (let [db (db conn)]
@@ -62,7 +73,7 @@
      ;; Set default interceptors for /about and any other paths under /
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
      ["/species" {:get species-index}
-       ^:interceptors [bootstrap/json-body]
+       ^:interceptors [bootstrap/json-body cacheable]
       ["/:taxon/:year-month"
        ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
        {:get countywise-frequencies}]]]
