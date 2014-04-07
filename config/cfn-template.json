@@ -105,11 +105,11 @@
                 "peersecgrp" : "birdman-peer-production",
                 "ddbTable" : "birdman_production",
                 "transactorInstanceType" : "m1.small",
-                "peerInstanceType" : "m1.small",
+                "peerInstanceType" : "m3.medium",
                 "transGrpMinSize" : "0",
                 "transGrpMaxSize" : "1",
                 "peerGrpMinSize" : "1",
-                "peerGrpMaxSize" : "3"
+                "peerGrpMaxSize" : "2"
             }
         },
         "tomcatConfig" : {
@@ -118,6 +118,7 @@
                 "JavaOpts" : "-server -XX:NewRatio=5 -XX:+UseConcMarkSweepGC -XX:+UseParNewGC -Dcom.sun.management.jmxremote"
             },
             "m1.small": { "Xms" : "256m", "Xmx" : "1280m", "MaxPermSize" : "128m" },
+            "m3.medium": { "Xms" : "512m", "Xmx" : "3072m", "MaxPermSize" : "256m" },
             "m1.large": { "Xms" : "512m", "Xmx" : "6656m", "MaxPermSize" : "512m" }
         },
 
@@ -128,12 +129,12 @@
 
             "m1.small": {
                 "Xmx" : "1190m",
-                "transSettings" : "memory-index-threshold=32m\nmemory-index-max=64m\nobject-cache-max=256m\n",
+                "transSettings" : "memory-index-threshold=32m\nmemory-index-max=64m\nobject-cache-max=512m\n",
                 "memIndexMbAlarmThresh" : "72"
             },
             "m1.large": {
                 "Xmx" : "5250m",
-                "transSettings" : "memory-index-threshold=256m\nmemory-index-max=512m\nobject-cache-max=768\n",
+                "transSettings" : "memory-index-threshold=256m\nmemory-index-max=512m\nobject-cache-max=1g\n",
                 "memIndexMbAlarmThresh" : "384"
             }
         }
@@ -330,16 +331,6 @@
                 "CidrIp" : "0.0.0.0/0",
                 "FromPort" : "8080", "ToPort" : "8080"
             }
-        },
-
-        "JmxIngress" : {
-          "Type" : "AWS::EC2::SecurityGroupIngress",
-          "Properties" : {
-            "GroupName" : { "Ref" : "PeerSecGrp" },
-            "IpProtocol" : "tcp",
-            "CidrIp" : "0.0.0.0/0",
-            "FromPort" : "31337", "ToPort" : "31337"
-          }
         },
 
         "TransactorLaunchConfig" : {
