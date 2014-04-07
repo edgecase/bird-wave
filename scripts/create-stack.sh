@@ -12,7 +12,13 @@ aws="aws --profile neo"
 
 # Uploaded war file will have modifcation ts embedded in its name
 warfile=uberwars/`basename $1 .war`-`stat -f %m $1`.war
-$aws s3 cp "$1" "s3://$SRCBUCKET/$warfile"
+remotefile="s3://$SRCBUCKET/$warfile"
+
+if [ -z "$($aws s3 ls $remotefile)" ]; then
+    $aws s3 cp "$1" $remotefile
+else
+    echo "$remotefile exists in S3. Skipping upload."
+fi
 
 parameters="--parameters ParameterKey=SrcBucket,ParameterValue=$SRCBUCKET"
 parameters="$parameters ParameterKey=WarFile,ParameterValue=$warfile"
