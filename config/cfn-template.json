@@ -26,6 +26,11 @@
       "Default" : "1",
       "AllowedValues" : [ "0", "1", "2" ]
     },
+    "DomainName" : {
+      "Description" : "DNS name that we will CNAME to the ELB",
+      "Type" : "String",
+      "Default" : "birdwave.neo.com"
+    },
     "JdkRpm" : {
       "Description" : "Path to Oracle JdkRpm in SrcBucket for transactor",
       "Type" : "String",
@@ -99,7 +104,7 @@
         "transGrpMinSize" : "0",
         "transGrpMaxSize" : "2",
         "peerGrpMinSize" : "1",
-        "peerGrpMaxSize" : "2",
+        "peerGrpMaxSize" : "2"
       },
       "production" : {
         "peersecgrp" : "birdman-peer-production",
@@ -472,6 +477,39 @@
           "UnhealthyThreshold": "3",
           "Interval": "12",
           "Timeout": "5"
+        }
+      }
+    },
+
+    "Distribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Origins": [
+            {
+              "DomainName": { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] },
+              "Id": "birdwaveOrigin",
+              "CustomOriginConfig": {
+                "HTTPPort": "80",
+                "HTTPSPort": "443",
+                "OriginProtocolPolicy": "http-only"
+              }
+            }
+          ],
+          "Enabled": "true",
+          "Comment": "Cache for birdwave species data",
+          "Logging": {
+            "Bucket": { "Fn::Join" : [ "", [{ "Ref" : "TransactorLogBucket" }, ".s3.amazonaws.com" ] ]},
+            "Prefix": "cloudfront-logs"
+          },
+          "Aliases": [{ "Ref" : "DomainName"}],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "birdwaveOrigin",
+            "ForwardedValues": {
+              "QueryString": "true"
+            },
+            "ViewerProtocolPolicy": "allow-all"
+          }
         }
       }
     },
