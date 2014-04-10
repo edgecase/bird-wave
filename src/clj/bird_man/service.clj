@@ -3,7 +3,8 @@
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
               [io.pedestal.service.http.route.definition :refer [defroutes]]
-              [io.pedestal.service.interceptor :refer [defon-request defon-response]]
+              [io.pedestal.service.interceptor :refer [on-response defon-request]]
+              [io.pedestal.service.http.ring-middlewares :as middlewares]
               [io.pedestal.service.log :as log]
               [clojure.java.io :as io]
               [ring.util.response :as ring-resp]
@@ -26,16 +27,20 @@
   "Add a conn reference to each request"
   add-datomic-conn)
 
-;Cache-Control: public, must-revalidate, max-age=2592000
-(defn add-cache-header
-  [{:keys [status headers] :as response}]
-  (if (= 200 status)
-    (assoc-in response [:headers "Cache-Control"] "public, max-age=99000000")
-    response))
-
-(defon-response cacheable
-  "Add a conn reference to each request"
-  add-cache-header)
+(defn cache-control
+  "Return response interceptor which adds Cache-Control header to response, when appropriate.
+   Will not override header when already set."
+  [max-age]
+  (on-response
+   (fn [{:keys [status headers] :as response}]
+     (log/info :cache-control headers)
+     (if (= 200 status)
+       (let [val (if (= :no-cache max-age)
+                   "no-cache"
+                   (str "public, max-age=" max-age))]
+         (assoc response :headers
+                (merge {"Cache-Control" val} headers)))
+       response))))
 
 (defn species-index [{conn :datomic-conn :as request}]
   (let [db (db conn)]
@@ -70,38 +75,34 @@
 
 (defroutes routes
   [[["/" {:get home-page}
-     ;; Set default interceptors for /about and any other paths under /
+     ;; Set default interceptors for any paths under /
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
+
      ["/species" {:get species-index}
-       ^:interceptors [bootstrap/json-body cacheable]
+      ^:interceptors [bootstrap/json-body (cache-control 300)]
+
       ["/:taxon/:year-month"
        ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
+       ^:interceptors [(cache-control 99000000)]
        {:get countywise-frequencies}]]]
+
     ["/health-check" {:get am-i-alive}]]])
 
 ;; Consumed by bird-man.server/create-server
 ;; See bootstrap/default-interceptors for additional options you can configure
-(def service {:env :prod
-              ;; You can bring your own non-default interceptors. Make
-              ;; sure you include routing and set it up right for
-              ;; dev-mode. If you do, many other keys for configuring
-              ;; default interceptors will be ignored.
-              ;; :bootstrap/interceptors []
-              ::bootstrap/routes routes
+(def service {
 
-              ;; Uncomment next line to enable CORS support, add
-              ;; string(s) specifying scheme, host and port for
-              ;; allowed source(s):
-              ;;
-              ;; "http://localhost:8080"
-              ;;
-              ;;::bootstrap/allowed-origins ["scheme://host:port"]
-
-              ;; Root for resource interceptor that is available by default.
-              ::bootstrap/resource-path "/public"
-
-              ;; Either :jetty or :tomcat (see comments in project.clj
-              ;; to enable Tomcat)
-              ;;::bootstrap/host "localhost"
+              ::bootstrap/interceptors
+              [bootstrap/log-request
+               ;; (cors/allow-origin ["scheme://host:port"])
+               (cache-control :no-cache)
+               bootstrap/not-found
+               (middlewares/content-type {:mime-types {}})
+               route/query-params
+               (route/method-param "_method")
+               (middlewares/resource "/public")
+               ;; (middlewares/file "/files")
+               (route/router routes)]
+              :env :prod
               ::bootstrap/type :jetty
               ::bootstrap/port 8080})
