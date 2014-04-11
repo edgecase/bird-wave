@@ -22,7 +22,6 @@
       {:source-paths ["src/cljs" "dev/cljs"]
        :compiler
        {:output-to "resources/public/javascript/client-dev.js"
-        :source-map "resources/public/javascript/client-dev.js.map"
         :optimizations :whitespace
         :pretty-print true
         :preamble ["react/react.js"]
@@ -30,13 +29,14 @@
       :prod
       {:source-paths ["src/cljs"]
        :compiler
-       {:output-dir "resources/public/javascript"
-        :output-to "resources/public/javascript/client.js"
-        :source-map "resources/public/javascript/client.js.map"
+       {:output-to "resources/public/javascript/client.js"
         :optimizations :advanced
         :pretty-print false
         :preamble ["react/react.min.js"]
-        :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js" "externs/colorbrewer.js"]}}}}
+        :externs ["react/externs/react.js"
+                  "externs/d3_externs_min.js"
+                  "externs/topojson.js"
+                  "externs/colorbrewer.js"]}}}}
 
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
