@@ -10,6 +10,10 @@
   (:import goog.History
            goog.history.EventType))
 
+(defn log [& args]
+  (if js/window.__birdman_debug__
+    (.log js/console (pr-str args))))
+
 (def svg-dim {:width 800 :height 500})
 (def key-dim {:width 10 :height 200})
 (def key-bg-dim {:width 45 :height 210})
@@ -71,7 +75,7 @@
                   }))
 
 (defn changed? [key old new]
-  (.log js/console (name key) (key old) (key new))
+  (log (name key) (key old) (key new))
   (not= (get old key) (get new key)))
 
 (defn has-sightings-for-current-state? [model]
@@ -80,18 +84,18 @@
 (declare update-counties)
 
 (defn fetch-month-data [model]
-  (.log js/console "fetch-month-data")
+  (log "fetch-month-data")
   (when (and (:current-taxon model)
              (:month-yr model)
              (not (has-sightings-for-current-state? model)))
-    (.log js/console "doing the fetch for realz")
+    (log "doing the fetch for realz")
     (js/d3.json (str "species/" (:current-taxon model) "/" (:month-yr model)) update-counties)))
 
 (defn watch-model
   "When the model changes update the map"
   [watch-name ref old new]
-  (.log js/console "month-yr changed: " (changed? :month-yr old new))
-  (.log js/console "current-taxon changed: " (changed? :current-taxon old new))
+  (log "month-yr changed: " (changed? :month-yr old new))
+  (log "current-taxon changed: " (changed? :current-taxon old new))
   (if (or (changed? :current-taxon old new)
           (changed? :month-yr old new))
     (fetch-month-data new)))
@@ -106,12 +110,12 @@
 (defroute "/" [] (swap! model assoc :current-taxon :nil :month-yr nil))
 
 (defroute taxon-month-path "/taxon/:order/:year/:month" [order year month]
-  (.log js/console "taxon-month-path" order year month)
+  (log "taxon-month-path" order year month)
   ;; TODO: validate year and month
   (swap! model assoc :current-taxon order :month-yr (str year "/" month)))
 
 (defroute taxon-path "/taxon/:order" [order]
-  (.log js/console "taxon-path")
+  (log "taxon-path")
   (push-state (taxon-month-path {:order order, :year 2012, :month 12})))
 
 
@@ -202,7 +206,7 @@ Will only affect history if there is a species selected."
         taxonomy (map keywordize-keys (js->clj species))
         taxon (or (:current-taxon mdl) (:taxon/order (rand-nth taxonomy)))
         month-yr (or (:month-yr mdl) "2012/12")]
-    (.log js/console taxon month-yr)
+    (log taxon month-yr)
     (swap! model assoc :taxonomy taxonomy)
     (update-location {:current-taxon taxon :month-yr month-yr})))
 
