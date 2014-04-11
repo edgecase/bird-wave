@@ -1,6 +1,5 @@
 (ns bird-man.client
-  (:require [clojure.browser.repl :as repl]
-            [clojure.string :as cs]
+  (:require [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
             [om.core :as om :include-macros true]
@@ -328,6 +327,7 @@ Will only affect history if there is a species selected."
                    (.call month-axis))]
 
     (add-watch model ::model-watch watch-model)
+
     (secretary/set-config! :prefix "#")
     (events/listen history EventType.NAVIGATE
                    (fn [e] (secretary/dispatch! (.-token e))))
@@ -336,13 +336,4 @@ Will only affect history if there is a species selected."
     (draw-map svg)
     (get-birds)
     (om/root species-list model {:target (.getElementById js/document "species")})
-    (om/root date-slider model {:target (.getElementById js/document "date-input")})
-    (repl/connect "http://localhost:9000/repl")))
-
-
-
-;; for debugging
-;; (om/root
-;;  ankha/inspector
-;;  model
-;;  {:target (js/document.getElementById "inspector")})
+    (om/root date-slider model {:target (.getElementById js/document "date-input")})))

@@ -15,12 +15,13 @@ warfile=uberwars/`basename $1 .war`-`stat -f %m $1`.war
 remotefile="s3://$SRCBUCKET/$warfile"
 
 if [ -z "$($aws s3 ls $remotefile)" ]; then
+    echo "uploading $1 to $remotefile"
     $aws s3 cp "$1" $remotefile
 else
     echo "$remotefile exists in S3. Skipping upload."
 fi
 
-parameters="--parameters ParameterKey=SrcBucket,ParameterValue=$SRCBUCKET"
+parameters="ParameterKey=SrcBucket,ParameterValue=$SRCBUCKET"
 parameters="$parameters ParameterKey=WarFile,ParameterValue=$warfile"
 parameters="$parameters ParameterKey=TransactorLogBucket,ParameterValue=$LOGBUCKET"
 parameters="$parameters ParameterKey=SshKey,ParameterValue=$SSHKEY"
@@ -32,4 +33,4 @@ $aws cloudformation update-stack \
     --stack-name "$2" \
     --template-body file://`dirname $0`/../config/cfn-template.json \
     --capabilities CAPABILITY_IAM \
-    $parameters
+    --parameters $parameters

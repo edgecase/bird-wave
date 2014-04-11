@@ -1,0 +1,3 @@
+var colorbrewer = {
+  "YlGnBu" : {}
+};

@@ -3,22 +3,23 @@
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
               [io.pedestal.service.http.route.definition :refer [defroutes]]
-              [io.pedestal.service.interceptor :refer [on-response defon-request]]
+              [io.pedestal.service.interceptor :refer [definterceptor on-response defon-request]]
               [io.pedestal.service.http.ring-middlewares :as middlewares]
               [io.pedestal.service.log :as log]
               [clojure.java.io :as io]
               [ring.util.response :as ring-resp]
               [ring.util.codec :as ring-codec]
-              [datomic.api :as d :refer (q db)]))
-
-(defn home-page [request]
-  (ring-resp/response
-   (slurp (io/resource "public/index.html"))))
+              [datomic.api :as d :refer (q db)]
+              [net.cgrand.enlive-html :refer (template deftemplate set-attr)]))
 
 (defonce datomic-connection nil)
+(defonce env :dev)
 
 (defn connect-datomic [uri]
   (alter-var-root #'datomic-connection (constantly (d/connect uri))))
+
+(defn set-env [e]
+  (alter-var-root #'env (constantly e)))
 
 (defn add-datomic-conn [request]
   (assoc request :datomic-conn datomic-connection))
@@ -33,7 +34,6 @@
   [max-age]
   (on-response
    (fn [{:keys [status headers] :as response}]
-     (log/info :cache-control headers)
      (if (= 200 status)
        (let [val (if (= :no-cache max-age)
                    "no-cache"
@@ -41,6 +41,15 @@
          (assoc response :headers
                 (merge {"Cache-Control" val} headers)))
        response))))
+
+(deftemplate home-template "templates/index.html" [env]
+  [:#client-script] (set-attr :src (if (= env :prod)
+                                     "/javascript/client.js"
+                                     "/javascript/client-dev.js")))
+
+(defn home-page [request]
+  (ring-resp/response
+   (apply str (home-template env))))
 
 (defn species-index [{conn :datomic-conn :as request}]
   (let [db (db conn)]
@@ -89,20 +98,19 @@
     ["/health-check" {:get am-i-alive}]]])
 
 ;; Consumed by bird-man.server/create-server
-;; See bootstrap/default-interceptors for additional options you can configure
-(def service {
-
-              ::bootstrap/interceptors
-              [bootstrap/log-request
-               ;; (cors/allow-origin ["scheme://host:port"])
-               (cache-control :no-cache)
-               bootstrap/not-found
-               (middlewares/content-type {:mime-types {}})
-               route/query-params
-               (route/method-param "_method")
-               (middlewares/resource "/public")
-               ;; (middlewares/file "/files")
-               (route/router routes)]
-              :env :prod
-              ::bootstrap/type :jetty
-              ::bootstrap/port 8080})
+(def service
+  {
+   ::bootstrap/interceptors
+   [bootstrap/log-request
+    ;; (cors/allow-origin ["scheme://host:port"])
+    (cache-control :no-cache)
+    bootstrap/not-found
+    (middlewares/content-type {:mime-types {}})
+    route/query-params
+    (route/method-param "_method")
+    (middlewares/resource "/public")
+    ;; (middlewares/file "/files")
+    (route/router routes)]
+   :env :prod
+   ::bootstrap/type :jetty
+   ::bootstrap/port 8080})

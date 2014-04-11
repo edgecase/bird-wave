@@ -21,11 +21,10 @@
 
 ;; Fns for use with io.pedestal.servlet.ClojureVarServlet
 
-(def datomic-uri "datomic:ddb://us-east-1/birdman_production/birdman")
-
 (defn servlet-init [this config]
   (server/init service/service)
-  (service/connect-datomic datomic-uri)
+  (service/connect-datomic (System/getProperty "DATOMIC_URI"))
+  (service/set-env :prod)
   (server/servlet-init this config))
 
 (defn servlet-destroy [this]
