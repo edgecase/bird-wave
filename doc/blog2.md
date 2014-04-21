@@ -100,7 +100,9 @@ a range of 9 colors based on where it falls between 0 and 5. The 9 colors come
 from [ColorBrewer](http://colorbrewer2.org/), which is an awesome project by
 Cynthia Brewer to provide color-blind-friendly color options for cartographers.
 
+## Stay Tuned
+
 And so we have the basic building blocks for our migration mapper. In the next
-section, we'll talk about how ClojureScript gives us the ability to build
-powerful interactive components that allow us to exploit the dynamic nature of
-the application.
+couple of weeks, we're going to introduce you to the application, and we'll talk
+some more about how Clojure, ClojureScript and Datomic are powerful tools
+for building interactive applications.
