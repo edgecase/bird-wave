@@ -313,7 +313,9 @@ Will only affect history if there is a species selected."
 
 (defn draw-map [svg]
   (js/d3.json "data/us.json"
-              #(plot svg %)))
+              (fn [us]
+                (aset js/window "mapdata" us)
+                (plot svg us))))
 
 
 (defn ^:export start []

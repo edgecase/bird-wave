@@ -82,31 +82,6 @@ header h1 {
   line-height: 1.3em;
 }
 
-label.component-label {
-  position: absolute;
-  width: 150px;
-  background: #7fcdbb;
-  color: white;
-  padding: 8px;
-  font-weight: 700;
-  border-radius: 2px;
-}
-
-label[for=species] {
-  top: 0px;
-  right: -160px;
-}
-
-label[for=slider] {
-  top: 0px;
-  left: -160px;
-}
-
-label[for=map] {
-  top: 500px;
-  left: -160px;
-}
-
 #map {
   width: 800px;
   border-top-left-radius: 5px;
