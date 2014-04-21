@@ -1,7 +1,10 @@
 # Choropleths and D3.js
 
 Choropleths are a great way to get a really clear depiction of how a statistic
-varies by location. In our case, the statistic in question is the frequency of
+varies by location. I'd like to share my experience from a project that we're
+not quite ready to announce yet.
+
+In our case, the statistic in question is the frequency of
 sightings for a given species of bird. The idea is to be able to see which
 areas of the country reflect a greater frequency month to month in order to get
 a feel for when and how the bird migrates.
