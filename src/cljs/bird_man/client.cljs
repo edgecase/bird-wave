@@ -113,16 +113,21 @@ Will only affect history if there is a species selected."
 
 ;; :onClick (fn [e] (update-location {:current-taxon this-taxon}) false)
 
-(defn taxon-path [taxon month-yr]
-  (str "/#/taxon/" taxon "/" month-yr))
+(defn taxon-path [taxon]
+  (str "/#/taxon/" taxon))
+
+;; (cond-> "taxon"
+;;         (:filtered? taxon) (str " filtered")
+;;         (:current? taxon) (str " current"))
 
 (defn species-item [taxon owner]
   (reify
     om/IRender
     (render [_]
-      (dom/li #js {:className "taxon"}
-              (dom/a #js {:href (taxon-path (:taxon/order taxon) month-yr)}
-                     (first (filter not-empty [(:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)])))))
+      (let [class-names (if (:hidden? taxon) "taxon hidden" "taxon")]
+        (dom/li #js {:className class-names}
+                (dom/a #js {:href (taxon-path (:taxon/order taxon))}
+                       (first (filter not-empty [(:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)]))))))
     om/IDidMount
     (did-mount [this]
       (let [node (om/get-node owner)
@@ -196,6 +201,7 @@ Will only affect history if there is a species selected."
           (.call (-> (js/d3.svg.axis)
                      (.scale months)
                      (.tickFormat (js/d3.time.format "%B"))))))))
+
 
 
 (defn build-key [state county]
@@ -343,8 +349,28 @@ Will only affect history if there is a species selected."
                 (aset js/window "mapdata" us)
                 (plot svg us))))
 
-(defn model-logic [tx-data root-cursor]
-  (log :tx-data (keys tx-data)))
+(defn filter-taxonomy [filter-text root-cursor]
+  (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
+    (loop [taxonomy (:taxonomy @root-cursor) index 0]
+      (when taxonomy
+        (let [taxon        (first taxonomy)
+              hidden?      (:hidden? taxon)
+              species-name (.toLowerCase (str (:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)))
+              have-match?  (re-find filter-re species-name)]
+
+          (cond
+           (and have-match? hidden?)
+           (om/transact! root-cursor [:taxonomy index] #(assoc % :hidden? false))
+
+           (and (not have-match?) (not hidden?))
+           (om/transact! root-cursor [:taxonomy index] #(assoc % :hidden? true)))
+          (recur (next taxonomy) (inc index)))))))
+
+(defn model-logic [{:keys [path new-value] :as tx-data} root-cursor]
+  ;;(:path :old-value :new-value :old-state :new-state)
+  (cond
+   (= path [:filter :text])
+   (filter-taxonomy new-value root-cursor)))
 
 (defn map-component [model owner]
   (reify
@@ -374,6 +400,8 @@ Will only affect history if there is a species selected."
                         (om/build species-list (:taxonomy model)))
                (om/build date-slider (:month-yr model))
                (om/build map-component model)))))
+
+
 
 (defn ^:export start []
   ;; (add-watch model ::model-watch watch-model)

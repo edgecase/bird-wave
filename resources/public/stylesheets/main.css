@@ -142,6 +142,10 @@ header h1 {
   border-bottom: 1px solid #ccc;
 }
 
+#species .taxon.hidden {
+  display: none;
+}
+
 #species .taxon a {
   color: #eee;
   width: 100%;
