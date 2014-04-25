@@ -4,7 +4,6 @@
             [goog.string.format :as gformat]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
-            [secretary.core :as secretary :include-macros true :refer [defroute]]
             [goog.events :as events]
             [ankha.core :as ankha])
   (:import goog.History
@@ -28,9 +27,7 @@
 (def months ( -> (js/d3.time.scale)
                  (.domain (array (new js/Date 2012 10 15) (new js/Date 2013 10 15)))
                  (.range (array 0 (- (:width svg-dim) 10)))))
-(def month-axis (-> (js/d3.svg.axis)
-                    (.scale months)
-                    (.tickFormat (js/d3.time.format "%B"))))
+(def month-axis )
 (def key-scale ( -> js/d3.scale
                     (.linear)
                     (.domain (array max-freq 0))
@@ -72,10 +69,9 @@
                   :month-yr nil     ; selected month
                   :taxonomy []      ; all taxons
                   :sightings {}     ; sightings for selected taxon, grouped by month-yr
-                  }))
+                  :filter {:text ""}}))
 
 (defn changed? [key old new]
-  (log (name key) (key old) (key new))
   (not= (get old key) (get new key)))
 
 (defn has-sightings-for-current-state? [model]
@@ -84,42 +80,27 @@
 (declare update-counties)
 
 (defn fetch-month-data [model]
-  (log "fetch-month-data")
   (when (and (:current-taxon model)
              (:month-yr model)
              (not (has-sightings-for-current-state? model)))
-    (log "doing the fetch for realz")
     (js/d3.json (str "species/" (:current-taxon model) "/" (:month-yr model)) update-counties)))
 
 (defn watch-model
   "When the model changes update the map"
   [watch-name ref old new]
-  (log "month-yr changed: " (changed? :month-yr old new))
-  (log "current-taxon changed: " (changed? :current-taxon old new))
   (if (or (changed? :current-taxon old new)
           (changed? :month-yr old new))
     (fetch-month-data new)))
 
 
-(def history (History.))
+;; (def history (History.))
 
-(defn push-state [token]
-  (.setToken history (cs/replace token #"^#" ""))
-  (secretary/dispatch! token))
-
-(defroute "/" [] (swap! model assoc :current-taxon :nil :month-yr nil))
-
-(defroute taxon-month-path "/taxon/:order/:year/:month" [order year month]
-  (log "taxon-month-path" order year month)
-  ;; TODO: validate year and month
-  (swap! model assoc :current-taxon order :month-yr (str year "/" month)))
-
-(defroute taxon-path "/taxon/:order" [order]
-  (log "taxon-path")
-  (push-state (taxon-month-path {:order order, :year 2012, :month 12})))
+;; (defn push-state [token]
+;;   (.setToken history (cs/replace token #"^#" ""))
+;;   )
 
 
-(defn update-location
+#_(defn update-location
   "Use this function when one of the controls (species or time) changes.
 Will only affect history if there is a species selected."
   [changes]
@@ -130,50 +111,91 @@ Will only affect history if there is a species selected."
     (if taxon
       (push-state (taxon-month-path {:order taxon, :month month :year year})))))
 
+;; :onClick (fn [e] (update-location {:current-taxon this-taxon}) false)
+
+(defn taxon-path [taxon month-yr]
+  (str "/#/taxon/" taxon "/" month-yr))
+
 (defn species-item [taxon owner]
   (reify
-    om/IRenderState
-    (render-state [this {:keys [current-taxon]}]
-      (let [this-taxon (:taxon/order taxon)
-            classes (cs/join " " ["taxon" (if (= current-taxon this-taxon) "selected")])]
-        (dom/li #js {:className classes}
-          (dom/a #js {:href (taxon-path {:order this-taxon})
-                      :onClick (fn [e]
-                                 (update-location {:current-taxon this-taxon})
-                                 false)}
-            (if-let [sub-name (not-empty (:taxon/subspecies-common-name taxon))]
-              sub-name
-              (:taxon/common-name taxon))))))
+    om/IRender
+    (render [_]
+      (dom/li #js {:className "taxon"}
+              (dom/a #js {:href (taxon-path (:taxon/order taxon) month-yr)}
+                     (first (filter not-empty [(:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)])))))
     om/IDidMount
     (did-mount [this]
-      (let [node (om/get-node (.-owner this))
+      (let [node (om/get-node owner)
             classes (.-classList node)]
         (when (.contains classes "selected")
           (.scrollIntoView node false))))))
 
-(defn species-list [model owner]
+(defn parse-route [url-fragment]
+  (let [[_ route taxon-order year month] (cs/split url-fragment "/")]
+    {:current-taxon taxon-order, :month-yr (str year "/" month)}))
+
+(defn historian [model owner]
+  (reify
+    om/IInitState
+    (init-state [_]
+      (let [history (History.)]
+        (events/listen history EventType.NAVIGATE ;;#(secretary/dispatch! (.-token %))
+                       (fn [e]
+                         (let [route (parse-route (.-token e))]
+                           (log "history event" route)
+                           (om/update! model :current-taxon (:current-taxon route))
+                           (om/update! model :month-yr (:month-yr route)))))
+        (.setEnabled history true)
+
+        {:history history}))
+    om/IRender
+    (render [_] (dom/div nil))))
+
+(defn species-filter [model owner]
   (reify
     om/IRender
-    (render [this]
-      (apply dom/ul #js {}
-       (om/build-all species-item (:taxonomy model)
-                     {:state (select-keys model [:current-taxon])})))))
+    (render [_]
+      (log :species-filter :render)
+      (dom/input #js {:type "text"
+                      :value (:text model)
+                      :onChange #(om/update! model :text (.. % -target -value))}))))
+
+(defn species-list [model owner]
+  (reify
+    om/IDidMount
+    (did-mount [_]
+      (log :species-list :mount))
+    om/IRender
+    (render [_]
+      (log :species-list :render)
+      (apply dom/ul nil
+             (om/build-all species-item model)))))
 
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 
+;; :onChange #(update-location {:month-yr (get dates (js/parseInt (.. % -target -value)))})
 (defn date-slider [model owner]
   (reify
     om/IRender
-    (render [this]
+    (render [_]
+      (log :date-slider)
       (let [val (if-let [date (:month-yr model)]
                   (.indexOf dates date)
                   0)]
-        (dom/input
-         #js {:type "range", :min 0, :max 11, :value val
-              :onChange #(update-location
-                          {:month-yr (get dates (js/parseInt (.. % -target -value)))})})))))
+        (dom/div #js {:id "slider"}
+                 (dom/div #js {:id "date-input"}
+                          (dom/input #js {:type "range", :min 0, :max 11, :value val}))
+                 (dom/svg nil
+                          (dom/g #js {:className "axis"})))))
+    om/IDidMount
+    (did-mount [_]
+      (-> js/d3
+          (.select ".axis")
+          (.call (-> (js/d3.svg.axis)
+                     (.scale months)
+                     (.tickFormat (js/d3.time.format "%B"))))))))
 
 
 (defn build-key [state county]
@@ -202,16 +224,20 @@ Will only affect history if there is a species selected."
   (color (freq-for-county data)))
 
 (defn list-birds [species]
-  (let [mdl @model
-        taxonomy (map keywordize-keys (js->clj species))
-        taxon (or (:current-taxon mdl) (:taxon/order (rand-nth taxonomy)))
-        month-yr (or (:month-yr mdl) "2012/12")]
-    (log taxon month-yr)
-    (swap! model assoc :taxonomy taxonomy)
-    (update-location {:current-taxon taxon :month-yr month-yr})))
+  )
 
-(defn get-birds []
-  (js/d3.json "species" list-birds))
+(defn get-birds [model]
+  (js/d3.json "species"
+              (fn [species]
+                (let [taxonomy (map keywordize-keys (js->clj species))
+                      taxon (or (:current-taxon @model) (:taxon/order (rand-nth taxonomy)))
+                      month-yr (or (:month-yr @model) "2012/12")]
+                  (log :get-birds taxon month-yr)
+                  (om/update! model :month-yr month-yr)
+                  (om/update! model :taxon taxon)
+                  (om/update! model :taxonomy (vec taxonomy))
+                  ;;(update-location {:current-taxon taxon :month-yr month-yr})
+                  ))))
 
 (defn update-counties [results]
   (populate-freqs results)
@@ -317,9 +343,44 @@ Will only affect history if there is a species selected."
                 (aset js/window "mapdata" us)
                 (plot svg us))))
 
+(defn model-logic [tx-data root-cursor]
+  (log :tx-data (keys tx-data)))
+
+(defn map-component [model owner]
+  (reify
+    om/IShouldUpdate ;; This component is controlled from D3. We don't ever want to update it.
+    (should-update [_ next-props next-state] false)
+    om/IRender
+    (render [_]
+      (log :map-component)
+      (dom/div #js {:id "map"}
+               (dom/svg #js {:height (:height svg-dim), :width (:width svg-dim)})))
+    om/IDidMount
+    (did-mount [_]
+      (let [svg (-> js/d3
+                (.select "#map svg")
+                (.on "click" prevent-zoom-on-drag true))]
+        (draw-map svg)
+        (get-birds model)))))
+
+(defn app [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div nil
+               (om/build historian model)
+               (dom/div #js {:id "species"}
+                        (om/build species-filter (:filter model))
+                        (om/build species-list (:taxonomy model)))
+               (om/build date-slider (:month-yr model))
+               (om/build map-component model)))))
 
 (defn ^:export start []
-  (let [svg (-> js/d3
+  ;; (add-watch model ::model-watch watch-model)
+  (om/root app model {:target (.getElementById js/document "main")
+                      :tx-listen model-logic})
+
+  #_(let [svg (-> js/d3
                 (.select "#map")
                 (.append "svg")
                 (.attr "height" (:height svg-dim))
@@ -332,14 +393,12 @@ Will only affect history if there is a species selected."
                    (.classed "axis" true)
                    (.call month-axis))]
 
-    (add-watch model ::model-watch watch-model)
 
-    (secretary/set-config! :prefix "#")
-    (events/listen history EventType.NAVIGATE
-                   (fn [e] (secretary/dispatch! (.-token e))))
-    (.setEnabled history true)
 
-    (draw-map svg)
-    (get-birds)
-    (om/root species-list model {:target (.getElementById js/document "species")})
-    (om/root date-slider model {:target (.getElementById js/document "date-input")})))
+    ;; (secretary/set-config! :prefix "#")
+    ;; (events/listen history EventType.NAVIGATE
+    ;;                (fn [e] (secretary/dispatch! (.-token e))))
+    ;; (.setEnabled history true)
+
+
+    ))
