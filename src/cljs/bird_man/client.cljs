@@ -163,7 +163,9 @@ Will only affect history if there is a species selected."
       (log :species-filter :render)
       (dom/input #js {:type "text"
                       :value (:text model)
-                      :onChange #(om/update! model :text (.. % -target -value))}))))
+                      :className "typeahead"
+                      :onChange #(om/update! model :text (.. % -target -value))}
+                 (dom/i #js {:className "icon-search"})))))
 
 (defn species-list [model owner]
   (reify
