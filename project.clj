@@ -9,9 +9,12 @@
                  [com.datomic/datomic-pro "0.9.4609" :exclusions [org.slf4j/slf4j-nop]]
                  [enlive "1.1.5"]
                  [org.clojure/clojurescript "0.0-2202"]
-                 [om "0.6.0"]
+                 [org.clojure/core.async "0.1.301.0-deb34a-alpha"]
+                 [om "0.6.2"]
                  [secretary "1.1.0"]]
-  :plugins      [[lein-cljsbuild "1.0.3"]
+  :git-dependencies [["https://github.com/arosequist/om-autocomplete.git"]]
+  :plugins      [[lein-git-deps "0.0.1-SNAPSHOT"]
+                 [lein-cljsbuild "1.0.3"]
                  [datomic-schema-grapher "0.0.1"]
                  [ohpauleez/lein-pedestal "0.1.0-beta10"]]
   :source-paths ["src/clj"]
@@ -19,7 +22,7 @@
   :cljsbuild
     {:builds
      {:dev
-      {:source-paths ["src/cljs" "dev/cljs"]
+      {:source-paths ["src/cljs" "dev/cljs" ".lein-git-deps/om-autocomplete/src"]
        :compiler
        {:output-to "resources/public/javascript/client-dev.js"
         :optimizations :whitespace
@@ -27,7 +30,7 @@
         :preamble ["react/react.js"]
         :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}
       :prod
-      {:source-paths ["src/cljs"]
+      {:source-paths ["src/cljs"  ".lein-git-deps/om-autocomplete/src"]
        :compiler
        {:output-to "resources/public/javascript/client.js"
         :optimizations :advanced

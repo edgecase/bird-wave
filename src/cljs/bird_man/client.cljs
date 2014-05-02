@@ -1,11 +1,16 @@
 (ns bird-man.client
+  (:require-macros [cljs.core.async.macros :refer (go)])
   (:require [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [goog.events :as events]
-            [ankha.core :as ankha])
+            [ankha.core :as ankha]
+            [cljs.core.async :as async :refer (chan put! <! timeout)]
+            [arosequist.om-autocomplete :as ac]
+            [arosequist.om-autocomplete.bootstrap :as bs])
+
   (:import goog.History
            goog.history.EventType))
 
@@ -116,22 +121,14 @@ Will only affect history if there is a species selected."
 (defn taxon-path [taxon]
   (str "/#/taxon/" taxon))
 
-(defn species-item [taxon owner]
+(defn species-item [model owner]
   (reify
-    om/IRender
-    (render [_]
-      (let [class-names (cond-> "taxon"
-                                (:hidden? taxon) (str " hidden")
-                                (:current? taxon) (str " current"))]
-        (dom/li #js {:className class-names}
-          (dom/a #js {:href (taxon-path (:taxon/order taxon))}
-                 (first (filter not-empty [(:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)]))))))
-    om/IDidMount
-    (did-mount [this]
-      (let [node (om/get-node owner)
-            classes (.-classList node)]
-        (when (.contains classes "selected")
-          (.scrollIntoView node false))))))
+    om/IRenderState
+    (render-state [_ {:keys [item idx]}]
+        (dom/li #js {:className "taxon"}
+          (dom/a #js {:href (taxon-path (:taxon/order item))}
+                 (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)]))))))
+  )
 
 (defn parse-route [url-fragment]
   (let [[_ route taxon-order year month] (cs/split url-fragment "/")]
@@ -156,13 +153,28 @@ Will only affect history if there is a species selected."
 
 (defn species-filter [model owner]
   (reify
-    om/IRender
-    (render [_]
-      (log :species-filter :render)
+    om/IRenderState
+    (render-state [_ {:keys [focus-ch value-ch highlight-ch select-ch value highlighted-index]}]
       (dom/input #js {:type "text"
-                      :value (:text model)
+                      :value value
+                      :autoComplete "off"
+                      :spellCheck "false"
+                      :placeholder "search for species"
                       :className "typeahead"
-                      :onChange #(om/update! model :text (.. % -target -value))}
+                      :onFocus #(put! focus-ch true)
+                      :onBlur #(go (let [_ (<! (timeout 100))]
+                                        ; if we don't wait, then the dropdown will disappear before
+                                        ; its onClick renders and a selection won't be made
+                                        ; this is a hack, of course, but I don't know how to fix it
+                                     (put! focus-ch false)))
+                      :onKeyDown (fn [e]
+                                   (log "got keypress" (.-keyCode e) "highlighted-index" highlighted-index)
+                                   (case (.-keyCode e)
+                                     40 (put! highlight-ch (inc highlighted-index))
+                                     38 (put! highlight-ch (dec highlighted-index))
+                                     13 (put! select-ch (or highlighted-index 0))
+                                     nil))
+                      :onChange #(put! value-ch (.. % -target -value))}
                  (dom/i #js {:className "icon-search"})))))
 
 (defn species-list [model owner]
@@ -170,12 +182,11 @@ Will only affect history if there is a species selected."
     om/IDidMount
     (did-mount [_]
       (log :species-list :mount))
-    om/IRender
-    (render [_]
+    om/IRenderState
+    (render-state [_ {:keys [highlight-ch select-ch value loading? focused? suggestions highlighted-index]}]
       (log :species-list :render)
       (apply dom/ul nil
-             (om/build-all species-item model)))))
-
+             (om/build-all species-item suggestions)))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
@@ -347,7 +358,7 @@ Will only affect history if there is a species selected."
                 (aset js/window "mapdata" us)
                 (plot svg us))))
 
-(defn filter-taxonomy [filter-text root-cursor]
+#_(defn filter-taxonomy [filter-text root-cursor]
   (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
     (om/transact! root-cursor :taxonomy
                   (fn [taxonomy]
@@ -358,9 +369,17 @@ Will only affect history if there is a species selected."
                                   (assoc taxon :hidden? (not have-match?))))
                               taxonomy))))))
 
+(defn filter-taxonomy [taxonomy filter-text]
+  (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
+    (vec (filter (fn [taxon]
+                   (let [species-name (.toLowerCase (str (:taxon/subspecies-common-name taxon)
+                                                         (:taxon/common-name taxon)))]
+                     (re-find filter-re species-name)))
+                 taxonomy))))
+
 ;;(:path :old-value :new-value :old-state :new-state)
 (defn model-logic [{:keys [path old-value new-value] :as tx-data} root-cursor]
-  (cond
+  #_(cond
    (= path [:filter :text])
    (filter-taxonomy new-value root-cursor)
 
@@ -383,15 +402,46 @@ Will only affect history if there is a species selected."
         (draw-map svg)
         (get-birds model)))))
 
+(defn ac-container [_ _ {:keys [class-name]}]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [input-component results-component]}]
+      (dom/div #js {:id "species"}
+        input-component results-component))))
+
+(defn display-name [item idx]
+  (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))
+
 (defn app [model owner]
   (reify
-    om/IRender
-    (render [_]
+    om/IInitState
+    (init-state [_]
+      {:result-ch (chan)})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [result-ch (om/get-state owner :result-ch)]
+        (go (loop []
+          (let [[idx result] (<! result-ch)]
+            (log "Result is" result)
+            (recur))))))
+
+    om/IRenderState
+    (render-state [_ {:keys [result-ch]}]
       (dom/div nil
         (om/build historian model)
-        (dom/div #js {:id "species"}
-          (om/build species-filter (:filter model))
-          (om/build species-list (:taxonomy model)))
+        (om/build ac/autocomplete model
+                  {:opts {:result-ch result-ch
+                          :suggestions-fn (fn [value suggestions-ch cancel-ch]
+                                            (put! suggestions-ch (filter-taxonomy (:taxonomy model) value)))
+                          :container-view ac-container
+                          :container-view-opts {}
+                          :input-view species-filter
+                          :input-view-opts {}
+                          :results-view bs/results-view
+                          :results-view-opts {:render-item bs/render-item
+                                              :render-item-opts {:class-name "taxon"
+                                                                 :text-fn display-name}}}})
         (om/build date-slider (:time-period model))
         (om/build map-component model)))))
 

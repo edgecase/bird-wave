@@ -175,7 +175,7 @@ header h1 {
 }
 
 #species .taxon:hover a,
-#species .taxon.selected a {
+#species .taxon.active a {
   background: #eee;
   color: #222;
 }
