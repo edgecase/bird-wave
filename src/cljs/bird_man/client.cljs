@@ -66,9 +66,9 @@
     {:scale scale :translate translate}))
 
 (def model (atom {:current-taxon nil
-                  :month-yr nil     ; selected month
+                  :time-period nil     ; selected month
                   :taxonomy []      ; all taxons
-                  :sightings {}     ; sightings for selected taxon, grouped by month-yr
+                  :sightings {}     ; sightings for selected taxon, grouped by time-period
                   :filter {:text ""}}))
 
 (defn changed? [key old new]
@@ -81,15 +81,15 @@
 
 (defn fetch-month-data [model]
   (when (and (:current-taxon model)
-             (:month-yr model)
+             (:time-period model)
              (not (has-sightings-for-current-state? model)))
-    (js/d3.json (str "species/" (:current-taxon model) "/" (:month-yr model)) update-counties)))
+    (js/d3.json (str "species/" (:current-taxon model) "/" (:time-period model)) update-counties)))
 
 (defn watch-model
   "When the model changes update the map"
   [watch-name ref old new]
   (if (or (changed? :current-taxon old new)
-          (changed? :month-yr old new))
+          (changed? :time-period old new))
     (fetch-month-data new)))
 
 
@@ -105,9 +105,9 @@
 Will only affect history if there is a species selected."
   [changes]
   (let [model @model
-        month-yr (get changes :month-yr (or (:month-yr model) "2012/12"))
+        time-period (get changes :time-period (or (:time-period model) "2012/12"))
         taxon (get changes :current-taxon (:current-taxon model))
-        [_ year month] (re-find #"(\d{4})/(\d{2})" month-yr)]
+        [_ year month] (re-find #"(\d{4})/(\d{2})" time-period)]
     (if taxon
       (push-state (taxon-month-path {:order taxon, :month month :year year})))))
 
@@ -116,18 +116,16 @@ Will only affect history if there is a species selected."
 (defn taxon-path [taxon]
   (str "/#/taxon/" taxon))
 
-;; (cond-> "taxon"
-;;         (:filtered? taxon) (str " filtered")
-;;         (:current? taxon) (str " current"))
-
 (defn species-item [taxon owner]
   (reify
     om/IRender
     (render [_]
-      (let [class-names (if (:hidden? taxon) "taxon hidden" "taxon")]
+      (let [class-names (cond-> "taxon"
+                                (:hidden? taxon) (str " hidden")
+                                (:current? taxon) (str " current"))]
         (dom/li #js {:className class-names}
-                (dom/a #js {:href (taxon-path (:taxon/order taxon))}
-                       (first (filter not-empty [(:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)]))))))
+          (dom/a #js {:href (taxon-path (:taxon/order taxon))}
+                 (first (filter not-empty [(:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)]))))))
     om/IDidMount
     (did-mount [this]
       (let [node (om/get-node owner)
@@ -137,19 +135,19 @@ Will only affect history if there is a species selected."
 
 (defn parse-route [url-fragment]
   (let [[_ route taxon-order year month] (cs/split url-fragment "/")]
-    {:current-taxon taxon-order, :month-yr (str year "/" month)}))
+    {:current-taxon taxon-order, :time-period (str year "/" month)}))
 
 (defn historian [model owner]
   (reify
     om/IInitState
     (init-state [_]
       (let [history (History.)]
-        (events/listen history EventType.NAVIGATE ;;#(secretary/dispatch! (.-token %))
+        (events/listen history EventType.NAVIGATE
                        (fn [e]
                          (let [route (parse-route (.-token e))]
                            (log "history event" route)
                            (om/update! model :current-taxon (:current-taxon route))
-                           (om/update! model :month-yr (:month-yr route)))))
+                           (om/update! model :time-period (:time-period route)))))
         (.setEnabled history true)
 
         {:history history}))
@@ -182,20 +180,20 @@ Will only affect history if there is a species selected."
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 
-;; :onChange #(update-location {:month-yr (get dates (js/parseInt (.. % -target -value)))})
+;; :onChange #(update-location {:time-period (get dates (js/parseInt (.. % -target -value)))})
 (defn date-slider [model owner]
   (reify
     om/IRender
     (render [_]
       (log :date-slider)
-      (let [val (if-let [date (:month-yr model)]
+      (let [val (if-let [date (:time-period model)]
                   (.indexOf dates date)
                   0)]
         (dom/div #js {:id "slider"}
-                 (dom/div #js {:id "date-input"}
-                          (dom/input #js {:type "range", :min 0, :max 11, :value val}))
-                 (dom/svg nil
-                          (dom/g #js {:className "axis"})))))
+          (dom/div #js {:id "date-input"}
+            (dom/input #js {:type "range", :min 0, :max 11, :value val}))
+          (dom/svg nil
+            (dom/g #js {:className "axis"})))))
     om/IDidMount
     (did-mount [_]
       (-> js/d3
@@ -239,13 +237,11 @@ Will only affect history if there is a species selected."
               (fn [species]
                 (let [taxonomy (map keywordize-keys (js->clj species))
                       taxon (or (:current-taxon @model) (:taxon/order (rand-nth taxonomy)))
-                      month-yr (or (:month-yr @model) "2012/12")]
-                  (log :get-birds taxon month-yr)
-                  (om/update! model :month-yr month-yr)
+                      time-period (or (:time-period @model) "2012/12")]
+                  (log :get-birds taxon time-period)
+                  (om/update! model :time-period time-period)
                   (om/update! model :taxon taxon)
-                  (om/update! model :taxonomy (vec taxonomy))
-                  ;;(update-location {:current-taxon taxon :month-yr month-yr})
-                  ))))
+                  (om/update! model :taxonomy (vec taxonomy))))))
 
 (defn update-counties [results]
   (populate-freqs results)
@@ -353,26 +349,22 @@ Will only affect history if there is a species selected."
 
 (defn filter-taxonomy [filter-text root-cursor]
   (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
-    (loop [taxonomy (:taxonomy @root-cursor) index 0]
-      (when taxonomy
-        (let [taxon        (first taxonomy)
-              hidden?      (:hidden? taxon)
-              species-name (.toLowerCase (str (:taxon/subspecies-common-name taxon) (:taxon/common-name taxon)))
-              have-match?  (re-find filter-re species-name)]
+    (om/transact! root-cursor :taxonomy
+                  (fn [taxonomy]
+                    (vec (map (fn [taxon]
+                                (let [species-name (.toLowerCase (str (:taxon/subspecies-common-name taxon)
+                                                                      (:taxon/common-name taxon)))
+                                      have-match?  (re-find filter-re species-name)]
+                                  (assoc taxon :hidden? (not have-match?))))
+                              taxonomy))))))
 
-          (cond
-           (and have-match? hidden?)
-           (om/transact! root-cursor [:taxonomy index] #(assoc % :hidden? false))
-
-           (and (not have-match?) (not hidden?))
-           (om/transact! root-cursor [:taxonomy index] #(assoc % :hidden? true)))
-          (recur (next taxonomy) (inc index)))))))
-
-(defn model-logic [{:keys [path new-value] :as tx-data} root-cursor]
-  ;;(:path :old-value :new-value :old-state :new-state)
+;;(:path :old-value :new-value :old-state :new-state)
+(defn model-logic [{:keys [path old-value new-value] :as tx-data} root-cursor]
   (cond
    (= path [:filter :text])
-   (filter-taxonomy new-value root-cursor)))
+   (filter-taxonomy new-value root-cursor)
+
+   ))
 
 (defn map-component [model owner]
   (reify
@@ -382,7 +374,7 @@ Will only affect history if there is a species selected."
     (render [_]
       (log :map-component)
       (dom/div #js {:id "map"}
-               (dom/svg #js {:height (:height svg-dim), :width (:width svg-dim)})))
+        (dom/svg #js {:height (:height svg-dim), :width (:width svg-dim)})))
     om/IDidMount
     (did-mount [_]
       (let [svg (-> js/d3
@@ -396,39 +388,15 @@ Will only affect history if there is a species selected."
     om/IRender
     (render [_]
       (dom/div nil
-               (om/build historian model)
-               (dom/div #js {:id "species"}
-                        (om/build species-filter (:filter model))
-                        (om/build species-list (:taxonomy model)))
-               (om/build date-slider (:month-yr model))
-               (om/build map-component model)))))
+        (om/build historian model)
+        (dom/div #js {:id "species"}
+          (om/build species-filter (:filter model))
+          (om/build species-list (:taxonomy model)))
+        (om/build date-slider (:time-period model))
+        (om/build map-component model)))))
 
 
 
 (defn ^:export start []
-  ;; (add-watch model ::model-watch watch-model)
   (om/root app model {:target (.getElementById js/document "main")
-                      :tx-listen model-logic})
-
-  #_(let [svg (-> js/d3
-                (.select "#map")
-                (.append "svg")
-                (.attr "height" (:height svg-dim))
-                (.attr "width" (:width svg-dim))
-                (.on "click" prevent-zoom-on-drag true))
-        slider (-> js/d3
-                   (.select "#slider")
-                   (.append "svg")
-                   (.append "g")
-                   (.classed "axis" true)
-                   (.call month-axis))]
-
-
-
-    ;; (secretary/set-config! :prefix "#")
-    ;; (events/listen history EventType.NAVIGATE
-    ;;                (fn [e] (secretary/dispatch! (.-token e))))
-    ;; (.setEnabled history true)
-
-
-    ))
+                      :tx-listen model-logic}))
