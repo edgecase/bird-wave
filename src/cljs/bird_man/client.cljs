@@ -1,5 +1,5 @@
 (ns bird-man.client
-  (:require-macros [cljs.core.async.macros :refer (go)])
+  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)])
   (:require [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
@@ -74,7 +74,7 @@
                   :time-period nil     ; selected month
                   :taxonomy []      ; all taxons
                   :sightings {}     ; sightings for selected taxon, grouped by time-period
-                  :filter {:text ""}}))
+                  }))
 
 (defn changed? [key old new]
   (not= (get old key) (get new key)))
@@ -89,20 +89,6 @@
              (:time-period model)
              (not (has-sightings-for-current-state? model)))
     (js/d3.json (str "species/" (:current-taxon model) "/" (:time-period model)) update-counties)))
-
-(defn watch-model
-  "When the model changes update the map"
-  [watch-name ref old new]
-  (if (or (changed? :current-taxon old new)
-          (changed? :time-period old new))
-    (fetch-month-data new)))
-
-
-;; (def history (History.))
-
-;; (defn push-state [token]
-;;   (.setToken history (cs/replace token #"^#" ""))
-;;   )
 
 
 #_(defn update-location
@@ -121,35 +107,23 @@ Will only affect history if there is a species selected."
 (defn taxon-path [taxon]
   (str "/#/taxon/" taxon))
 
-(defn species-item [model owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [item idx]}]
-        (dom/li #js {:className "taxon"}
-          (dom/a #js {:href (taxon-path (:taxon/order item))}
-                 (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)]))))))
-  )
-
 (defn parse-route [url-fragment]
   (let [[_ route taxon-order year month] (cs/split url-fragment "/")]
-    {:current-taxon taxon-order, :time-period (str year "/" month)}))
+    {:current-taxon taxon-order
+     :time-period (when (and year month) (str year "/" month))}))
 
-(defn historian [model owner]
-  (reify
-    om/IInitState
-    (init-state [_]
-      (let [history (History.)]
+(defn historian [ch]
+  (let [history (History.)]
         (events/listen history EventType.NAVIGATE
                        (fn [e]
-                         (let [route (parse-route (.-token e))]
-                           (log "history event" route)
-                           (om/update! model :current-taxon (:current-taxon route))
-                           (om/update! model :time-period (:time-period route)))))
+                         (when-let [route (parse-route (.-token e))]
+                           (put! ch route))))
         (.setEnabled history true)
+        history))
 
-        {:history history}))
-    om/IRender
-    (render [_] (dom/div nil))))
+(defn push-state [model history]
+  (let [{:keys [current-taxon time-period]} @model]
+    (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
 (defn species-filter [model owner]
   (reify
@@ -177,6 +151,14 @@ Will only affect history if there is a species selected."
                       :onChange #(put! value-ch (.. % -target -value))}
                  (dom/i #js {:className "icon-search"})))))
 
+(defn species-item [model owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [item idx]}]
+        (dom/li #js {:className "taxon"}
+          (dom/a #js {:href (taxon-path (:taxon/order item))}
+                 (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))))))
+
 (defn species-list [model owner]
   (reify
     om/IDidMount
@@ -202,7 +184,13 @@ Will only affect history if there is a species selected."
                   0)]
         (dom/div #js {:id "slider"}
           (dom/div #js {:id "date-input"}
-            (dom/input #js {:type "range", :min 0, :max 11, :value val}))
+            (dom/input #js
+              {:type "range"
+               :min 0
+               :max 11
+               :value val
+               :onChange (fn [e] (put! (om/get-state owner :time-period-ch)
+                                       (get dates (js/parseInt (.. e -target -value)))))}))
           (dom/svg nil
             (dom/g #js {:className "axis"})))))
     om/IDidMount
@@ -249,10 +237,12 @@ Will only affect history if there is a species selected."
                 (let [taxonomy (map keywordize-keys (js->clj species))
                       taxon (or (:current-taxon @model) (:taxon/order (rand-nth taxonomy)))
                       time-period (or (:time-period @model) "2012/12")]
-                  (log :get-birds taxon time-period)
-                  (om/update! model :time-period time-period)
-                  (om/update! model :current-taxon taxon)
-                  (om/update! model :taxonomy (vec taxonomy))))))
+                  (om/update! model :taxonomy (vec taxonomy))
+
+                  (comment (log :get-birds taxon time-period)
+                           (om/update! model :time-period time-period)
+                           (om/update! model :current-taxon taxon))
+                  ))))
 
 (defn update-counties [results]
   (populate-freqs results)
@@ -416,22 +406,43 @@ Will only affect history if there is a species selected."
   (reify
     om/IInitState
     (init-state [_]
-      {:result-ch (chan)})
+      (let [time-period-ch (chan)
+            species-ch (chan)
+            history-ch (chan)]
+        {:time-period-ch time-period-ch
+         :species-ch species-ch
+         :history-ch history-ch
+         :history (historian history-ch)}))
 
     om/IWillMount
     (will-mount [_]
-      (let [result-ch (om/get-state owner :result-ch)]
-        (go (loop []
-          (let [[idx result] (<! result-ch)]
-            (om/update! model :current-taxon (:taxon/order @result))
-            (recur))))))
+      (let [time-period-ch (om/get-state owner :time-period-ch)
+            species-ch (om/get-state owner :species-ch)
+            history-ch (om/get-state owner :history-ch)
+            history (om/get-state owner :history)]
+        (go-loop []
+          (alt!
+            time-period-ch ([new-time-period]
+                              (om/update! model :time-period new-time-period)
+                              (push-state model history))
+            species-ch ([[idx result]]
+                          (om/update! model :current-taxon (:taxon/order @result))
+                          (push-state model history))
+            history-ch ([{:keys [current-taxon time-period]}]
+                          (let [use-defaults? (not (and current-taxon time-period))
+                                taxon (or current-taxon (:taxon/order (rand-nth (:taxonomy @model))))
+                                time (or time-period (first dates))]
+                            (om/update! model :current-taxon taxon)
+                            (om/update! model :time-period time)
+                            (when use-defaults?
+                              (push-state model history)))))
+          (recur))))
 
     om/IRenderState
-    (render-state [_ {:keys [result-ch]}]
+    (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build historian model)
         (om/build ac/autocomplete model
-                  {:opts {:result-ch result-ch
+                  {:opts {:result-ch species-ch
                           :suggestions-fn (fn [value suggestions-ch cancel-ch]
                                             (put! suggestions-ch (filter-taxonomy (:taxonomy model) value)))
                           :container-view ac-container
@@ -442,7 +453,7 @@ Will only affect history if there is a species selected."
                           :results-view-opts {:render-item bs/render-item
                                               :render-item-opts {:class-name "taxon"
                                                                  :text-fn display-name}}}})
-        (om/build date-slider (:time-period model))
+        (om/build date-slider model {:state {:time-period-ch time-period-ch}})
         (om/build map-component model)))))
 
 
