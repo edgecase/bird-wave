@@ -251,7 +251,7 @@ Will only affect history if there is a species selected."
                       time-period (or (:time-period @model) "2012/12")]
                   (log :get-birds taxon time-period)
                   (om/update! model :time-period time-period)
-                  (om/update! model :taxon taxon)
+                  (om/update! model :current-taxon taxon)
                   (om/update! model :taxonomy (vec taxonomy))))))
 
 (defn update-counties [results]
@@ -423,7 +423,7 @@ Will only affect history if there is a species selected."
       (let [result-ch (om/get-state owner :result-ch)]
         (go (loop []
           (let [[idx result] (<! result-ch)]
-            (log "Result is" result)
+            (om/update! model :current-taxon (:taxon/order @result))
             (recur))))))
 
     om/IRenderState
@@ -450,3 +450,6 @@ Will only affect history if there is a species selected."
 (defn ^:export start []
   (om/root app model {:target (.getElementById js/document "main")
                       :tx-listen model-logic}))
+
+(defn ^:export info []
+  (log (dissoc @model :taxonomy)))
