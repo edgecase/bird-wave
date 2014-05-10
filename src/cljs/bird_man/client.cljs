@@ -79,30 +79,18 @@
 (defn changed? [key old new]
   (not= (get old key) (get new key)))
 
-(defn has-sightings-for-current-state? [model]
-  false)
-
 (declare update-counties)
 
-(defn fetch-month-data [model]
-  (when (and (:current-taxon model)
-             (:time-period model)
-             (not (has-sightings-for-current-state? model)))
-    (js/d3.json (str "species/" (:current-taxon model) "/" (:time-period model)) update-counties)))
+(def most-recent-fetch nil)
 
+(defn update-map! [model]
+  (let [{:keys [current-taxon time-period]} @model]
+    (let [url (str "species/" current-taxon "/" time-period)]
+      (when (and current-taxon
+                 time-period
+                 (not= most-recent-fetch url))
+        (js/d3.json url update-counties)))))
 
-#_(defn update-location
-  "Use this function when one of the controls (species or time) changes.
-Will only affect history if there is a species selected."
-  [changes]
-  (let [model @model
-        time-period (get changes :time-period (or (:time-period model) "2012/12"))
-        taxon (get changes :current-taxon (:current-taxon model))
-        [_ year month] (re-find #"(\d{4})/(\d{2})" time-period)]
-    (if taxon
-      (push-state (taxon-month-path {:order taxon, :month month :year year})))))
-
-;; :onClick (fn [e] (update-location {:current-taxon this-taxon}) false)
 
 (defn taxon-path [taxon]
   (str "/#/taxon/" taxon))
@@ -142,7 +130,6 @@ Will only affect history if there is a species selected."
                                         ; this is a hack, of course, but I don't know how to fix it
                                      (put! focus-ch false)))
                       :onKeyDown (fn [e]
-                                   (log "got keypress" (.-keyCode e) "highlighted-index" highlighted-index)
                                    (case (.-keyCode e)
                                      40 (put! highlight-ch (inc highlighted-index))
                                      38 (put! highlight-ch (dec highlighted-index))
@@ -173,7 +160,6 @@ Will only affect history if there is a species selected."
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 
-;; :onChange #(update-location {:time-period (get dates (js/parseInt (.. % -target -value)))})
 (defn date-slider [model owner]
   (reify
     om/IRender
@@ -234,17 +220,11 @@ Will only affect history if there is a species selected."
 (defn get-birds [model]
   (js/d3.json "species"
               (fn [species]
-                (let [taxonomy (map keywordize-keys (js->clj species))
-                      taxon (or (:current-taxon @model) (:taxon/order (rand-nth taxonomy)))
-                      time-period (or (:time-period @model) "2012/12")]
-                  (om/update! model :taxonomy (vec taxonomy))
-
-                  (comment (log :get-birds taxon time-period)
-                           (om/update! model :time-period time-period)
-                           (om/update! model :current-taxon taxon))
-                  ))))
+                (let [taxonomy (map keywordize-keys (js->clj species))]
+                  (om/update! model :taxonomy (vec taxonomy))))))
 
 (defn update-counties [results]
+  (log :update-counties)
   (populate-freqs results)
   ( -> js/d3
        (.selectAll "path.county")
@@ -348,17 +328,6 @@ Will only affect history if there is a species selected."
                 (aset js/window "mapdata" us)
                 (plot svg us))))
 
-#_(defn filter-taxonomy [filter-text root-cursor]
-  (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
-    (om/transact! root-cursor :taxonomy
-                  (fn [taxonomy]
-                    (vec (map (fn [taxon]
-                                (let [species-name (.toLowerCase (str (:taxon/subspecies-common-name taxon)
-                                                                      (:taxon/common-name taxon)))
-                                      have-match?  (re-find filter-re species-name)]
-                                  (assoc taxon :hidden? (not have-match?))))
-                              taxonomy))))))
-
 (defn filter-taxonomy [taxonomy filter-text]
   (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
     (vec (filter (fn [taxon]
@@ -366,14 +335,6 @@ Will only affect history if there is a species selected."
                                                          (:taxon/common-name taxon)))]
                      (re-find filter-re species-name)))
                  taxonomy))))
-
-;;(:path :old-value :new-value :old-state :new-state)
-(defn model-logic [{:keys [path old-value new-value] :as tx-data} root-cursor]
-  #_(cond
-   (= path [:filter :text])
-   (filter-taxonomy new-value root-cursor)
-
-   ))
 
 (defn map-component [model owner]
   (reify
@@ -424,16 +385,20 @@ Will only affect history if there is a species selected."
           (alt!
             time-period-ch ([new-time-period]
                               (om/update! model :time-period new-time-period)
-                              (push-state model history))
+                              (push-state model history)
+                              (update-map! model))
             species-ch ([[idx result]]
                           (om/update! model :current-taxon (:taxon/order @result))
-                          (push-state model history))
+                          (push-state model history)
+                          (update-map! model))
             history-ch ([{:keys [current-taxon time-period]}]
+                          (log :history-ch)
                           (let [use-defaults? (not (and current-taxon time-period))
                                 taxon (or current-taxon (:taxon/order (rand-nth (:taxonomy @model))))
                                 time (or time-period (first dates))]
                             (om/update! model :current-taxon taxon)
                             (om/update! model :time-period time)
+                            (update-map! model)
                             (when use-defaults?
                               (push-state model history)))))
           (recur))))
@@ -459,8 +424,7 @@ Will only affect history if there is a species selected."
 
 
 (defn ^:export start []
-  (om/root app model {:target (.getElementById js/document "main")
-                      :tx-listen model-logic}))
+  (om/root app model {:target (.getElementById js/document "main")}))
 
 (defn ^:export info []
   (log (dissoc @model :taxonomy)))
