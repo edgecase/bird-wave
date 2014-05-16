@@ -13,7 +13,7 @@
                  [om "0.6.2"]
                  [secretary "1.1.0"]]
   :git-dependencies [["https://github.com/arosequist/om-autocomplete.git"]]
-  :plugins      [[lein-git-deps "0.0.1-SNAPSHOT"]
+  :plugins      [[lein-git-deps "0.0.2-SNAPSHOT"]
                  [lein-cljsbuild "1.0.3"]
                  [datomic-schema-grapher "0.0.1"]
                  [ohpauleez/lein-pedestal "0.1.0-beta10"]]
@@ -24,7 +24,9 @@
      {:dev
       {:source-paths ["src/cljs" "dev/cljs" ".lein-git-deps/om-autocomplete/src"]
        :compiler
-       {:output-to "resources/public/javascript/client-dev.js"
+       {:output-to "resources/public/javascript/build/client-dev.js"
+        :output-dir "resources/public/javascript/build"
+        :source-map "resources/public/javascript/build/client-dev.js.map"
         :optimizations :whitespace
         :pretty-print true
         :preamble ["react/react.js"]
