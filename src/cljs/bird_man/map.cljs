@@ -1,4 +1,5 @@
-(ns bird-man.map)
+(ns bird-man.map
+  (:require [clojure.string :as cs]))
 
 (def svg-dim {:width 800 :height 500})
 (def key-dim {:width 10 :height 200})
@@ -50,6 +51,40 @@
         scale (/ 0.9 (js/Math.max (/ dx width) (/ dy height)))
         translate (array (- (/ width 2) (* scale x)) (- (/ height 2) (* scale y)))]
     {:scale scale :translate translate}))
+
+(defn init-axis [selector]
+  (-> js/d3
+      (.select selector)
+      (.call (-> (js/d3.svg.axis)
+                 (.scale months)
+                 (.tickFormat (js/d3.time.format "%B"))))))
+
+(defn reset [svg]
+  (.classed (active-state) "active" false)
+  (-> svg
+      (.transition)
+      (.duration zoom-duration)
+      (.call (.-event (-> zoom
+                          (.translate (array 0 0))
+                          (.scale 1))))))
+
+(defn zoom-state [svg state]
+  (let [zoom-attrs (active-attrs state)]
+    (if (= (.node (state-to-activate)) (.node (active-state)))
+      (reset svg)
+      (do
+        (.classed (active-state) "active" false)
+        (.classed (state-to-activate) "active" true)
+        (-> svg
+            (.transition)
+            (.duration zoom-duration)
+            (.call (.-event (-> zoom
+                                (.translate (:translate zoom-attrs))
+                                (.scale (:scale zoom-attrs))))))))))
+
+(defn prevent-zoom-on-drag []
+  (let [e (.-event js/d3)]
+    (when (.-defaultPrevented e) (.stopPropagation e))))
 
 (defn plot [svg us]
   (let [s-width (:width svg-dim)
@@ -113,9 +148,48 @@
         (.attr "y" #(key-scale (nth % 1)))
         (.style "fill" #(nth (.range color) %2)))))
 
-(defn init-axis [selector]
-  (-> js/d3
-      (.select selector)
-      (.call (-> (js/d3.svg.axis)
-                 (.scale months)
-                 (.tickFormat (js/d3.time.format "%B"))))))
+(defn draw-map [svg]
+  (js/d3.json "data/us.json"
+              (fn [us]
+                (aset js/window "mapdata" us)
+                (plot svg us))))
+
+(defn init-map [svg-sel model]
+  (let [svg (-> js/d3
+                (.select svg-sel)
+                (.on "click" prevent-zoom-on-drag true))]
+    (draw-map svg)))
+
+(defn build-key [state county]
+  (apply str (interpose "-" [state county])))
+
+(defn make-frequencies [stats]
+  (into {}
+        (map (fn [s]
+               [(build-key (aget s "state") (aget s "county"))
+                (/ (aget s "total") (aget s "sightings"))])
+             stats)))
+
+(defn freq-for-county [frequencies data]
+  (let [p (aget data "properties")
+        st (str "US-" (aget p "state"))
+        cty (first (cs/split (aget p "county") " "))
+        keystr (build-key st cty)
+        freq (get frequencies keystr)]
+  (if freq freq 0.0)))
+
+(defn freq-duration [frequencies]
+  (fn [data]
+    (+ (* 100 (freq-for-county frequencies data)) 200)))
+
+(defn freq-color [frequencies]
+  (fn [data]
+    (color (freq-for-county frequencies data))))
+
+(defn update-counties [model]
+  ( -> js/d3
+       (.selectAll "path.county")
+       (.transition)
+       (.duration (freq-duration model))
+       (.style "fill" (freq-color model))
+       (.style "stroke" (freq-color model))))

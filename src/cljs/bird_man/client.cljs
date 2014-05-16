@@ -9,8 +9,9 @@
             [ankha.core :as ankha]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
             [arosequist.om-autocomplete :as ac]
-            [bird-man.map :refer (plot init-axis color active-state zoom zoom-duration
-                                       svg-dim state-to-activate active-attrs)])
+            [bird-man.map :refer (init-axis color active-state zoom zoom-duration
+                                  svg-dim state-to-activate active-attrs
+                                  prevent-zoom-on-drag init-map update-counties make-frequencies)])
 
   (:import goog.History
            goog.history.EventType))
@@ -25,13 +26,15 @@
                   :taxonomy []      ; all taxons
                   :frequencies {}}))
 
-(declare update-counties)
-
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period]} @model
         url (str "species/" current-taxon "/" time-period)]
     (when (and current-taxon time-period)
-      (js/d3.json url (update-counties model)))))
+      (js/d3.json url (fn [data]
+                        (om/update! model :frequencies
+                                    (make-frequencies data))
+                        (update-counties (:frequencies @model)))))))
+
 
 (defn taxon-path [taxon]
   (str "/#/taxon/" taxon))
@@ -125,32 +128,7 @@
 
 
 
-(defn build-key [state county]
-  (apply str (interpose "-" [state county])))
 
-(defn populate-freqs [model stats]
-  (om/update! model :frequencies
-              (into {}
-                    (map (fn [s]
-                           [(build-key (aget s "state") (aget s "county"))
-                            (/ (aget s "total") (aget s "sightings"))])
-                         stats))))
-
-(defn freq-for-county [{:keys [frequencies]} data]
-  (let [p (aget data "properties")
-        st (str "US-" (aget p "state"))
-        cty (first (cs/split (aget p "county") " "))
-        keystr (build-key st cty)
-        freq (get frequencies keystr)]
-  (if freq freq 0.0)))
-
-(defn freq-duration [frequencies]
-  (fn [data]
-    (+ (* 100 (freq-for-county @frequencies data)) 200)))
-
-(defn freq-color [frequencies]
-  (fn [data]
-    (color (freq-for-county @frequencies data))))
 
 (defn get-birds [model]
   (js/d3.json "species"
@@ -158,49 +136,8 @@
                 (let [taxonomy (map keywordize-keys (js->clj species))]
                   (om/update! model :taxonomy (vec taxonomy))))))
 
-(defn update-counties [model]
-  (fn [results]
-    (log :update-counties)
-    (populate-freqs model results)
-    ( -> js/d3
-         (.selectAll "path.county")
-         (.transition)
-         (.duration (freq-duration model))
-         (.style "fill" (freq-color model))
-         (.style "stroke" (freq-color model)))))
 
-(defn reset [svg]
-  (.classed (active-state) "active" false)
-  (-> svg
-      (.transition)
-      (.duration zoom-duration)
-      (.call (.-event (-> zoom
-                          (.translate (array 0 0))
-                          (.scale 1))))))
 
-(defn zoom-state [svg state]
-  (let [zoom-attrs (active-attrs state)]
-    (if (= (.node (state-to-activate)) (.node (active-state)))
-      (reset svg)
-      (do
-        (.classed (active-state) "active" false)
-        (.classed (state-to-activate) "active" true)
-        (-> svg
-            (.transition)
-            (.duration zoom-duration)
-            (.call (.-event (-> zoom
-                                (.translate (:translate zoom-attrs))
-                                (.scale (:scale zoom-attrs))))))))))
-
-(defn prevent-zoom-on-drag []
-  (let [e (.-event js/d3)]
-    (when (.-defaultPrevented e) (.stopPropagation e))))
-
-(defn draw-map [svg]
-  (js/d3.json "data/us.json"
-              (fn [us]
-                (aset js/window "mapdata" us)
-                (plot svg us))))
 
 (defn filter-taxonomy [taxonomy filter-text]
   (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
@@ -218,14 +155,12 @@
     (render [_]
       (log :map-component)
       (dom/div #js {:id "map"}
-        (dom/svg #js {:height (:height svg-dim), :width (:width svg-dim)})))
+        (dom/svg #js {:height (:height svg-dim)
+                      :width (:width svg-dim)})))
     om/IDidMount
     (did-mount [_]
-      (let [svg (-> js/d3
-                (.select "#map svg")
-                (.on "click" prevent-zoom-on-drag true))]
-        (draw-map svg)
-        (get-birds model)))))
+      (init-map "#map svg" model)
+      (get-birds model))))
 
 (defn ac-container [_ _ {:keys [class-name]}]
   (reify
