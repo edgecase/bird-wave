@@ -8,8 +8,7 @@
             [goog.events :as events]
             [ankha.core :as ankha]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
-            [arosequist.om-autocomplete :as ac]
-            [arosequist.om-autocomplete.bootstrap :as bs])
+            [arosequist.om-autocomplete :as ac])
 
   (:import goog.History
            goog.history.EventType))
@@ -115,20 +114,19 @@
 
 (defn species-filter [model owner]
   (reify
+    om/IDidMount
+    (did-mount [_]
+      (log "!!!!!!!!!!")
+      (put! (om/get-state owner :focus-ch) true)
+      #_(put! (om/get-state owner :value-ch) "a"))
     om/IRenderState
-    (render-state [_ {:keys [focus-ch value-ch highlight-ch select-ch value highlighted-index]}]
+    (render-state [_ {:keys [value-ch highlight-ch select-ch value highlighted-index]}]
       (dom/input #js {:type "text"
                       :value value
                       :autoComplete "off"
                       :spellCheck "false"
                       :placeholder "search for species"
                       :className "typeahead"
-                      :onFocus #(put! focus-ch true)
-                      :onBlur #(go (let [_ (<! (timeout 100))]
-                                        ; if we don't wait, then the dropdown will disappear before
-                                        ; its onClick renders and a selection won't be made
-                                        ; this is a hack, of course, but I don't know how to fix it
-                                     (put! focus-ch false)))
                       :onKeyDown (fn [e]
                                    (case (.-keyCode e)
                                      40 (put! highlight-ch (inc highlighted-index))
@@ -363,6 +361,64 @@
 (defn display-name [item idx]
   (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))
 
+;;;;;;;;;;;;;;;;
+(defn results-view [app _ {:keys [class-name
+                                  loading-view loading-view-opts
+                                  render-item render-item-opts]}]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [highlight-ch select-ch value loading? focused? suggestions highlighted-index]}]
+      (let [display? (and focused? value (not= value ""))
+            display (if display? "block" "none")
+            attrs #js {:className "dropdown-menu"
+                       :style #js {:display display}}]
+        (if loading?
+          (dom/ul attrs
+            (om/build loading-view app {:opts loading-view-opts}))
+          (apply dom/ul attrs
+            (map-indexed
+              (fn [idx item]
+                (om/build render-item app {:init-state
+                                            {:highlight-ch highlight-ch
+                                             :select-ch select-ch}
+                                           :state
+                                            {:item item
+                                             :index idx
+                                             :highlighted-index highlighted-index}
+                                           :opts render-item-opts}))
+              suggestions)))))))
+
+(defn render-item [app owner {:keys [class-name text-fn]}]
+  (reify
+    om/IInitState
+    (init-state [_]
+      {:click-ch (chan)})
+
+    om/IWillMount
+    (will-mount [_]
+      (let [click-ch (om/get-state owner :click-ch)
+            select-ch (om/get-state owner :select-ch)]
+        (go (loop []
+          (<! click-ch)
+          (put! select-ch (om/get-state owner :index))))))
+
+    om/IDidMount
+    (did-mount [this]
+      (let [index (om/get-state owner :index)
+            highlight-ch (om/get-state owner :highlight-ch)
+            click-ch (om/get-state owner :click-ch)
+            node (om/get-node owner)]
+        (events/listen node (.-MOUSEOVER events/EventType) #(put! highlight-ch index))
+        (events/listen node (.-CLICK events/EventType) #(put! click-ch true))))
+
+    om/IRenderState
+    (render-state [_ {:keys [click-ch select-ch item index highlighted-index]}]
+      (let [highlighted? (= index highlighted-index)]
+        (dom/li #js {:className (if highlighted? (str "active " class-name) class-name)}
+          (dom/a #js {:href "#"}
+            (text-fn item index)))))))
+;;;;;;;;;;;;;;;;
+
 (defn app [model owner]
   (reify
     om/IInitState
@@ -414,8 +470,8 @@
                           :container-view-opts {}
                           :input-view species-filter
                           :input-view-opts {}
-                          :results-view bs/results-view
-                          :results-view-opts {:render-item bs/render-item
+                          :results-view results-view
+                          :results-view-opts {:render-item render-item
                                               :render-item-opts {:class-name "taxon"
                                                                  :text-fn display-name}}}})
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})

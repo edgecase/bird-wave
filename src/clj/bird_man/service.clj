@@ -45,7 +45,7 @@
 (deftemplate home-template "templates/index.html" [env]
   [:#client-script] (set-attr :src (if (= env :prod)
                                      "/javascript/client.js"
-                                     "/javascript/client-dev.js")))
+                                     "/javascript/build/client-dev.js")))
 
 (defn home-page [request]
   (ring-resp/response
