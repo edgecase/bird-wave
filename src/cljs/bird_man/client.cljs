@@ -173,31 +173,26 @@
   (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))
 
 ;;;;;;;;;;;;;;;;
+
 (defn results-view [app _ {:keys [class-name
                                   loading-view loading-view-opts
                                   render-item render-item-opts]}]
   (reify
     om/IRenderState
     (render-state [_ {:keys [highlight-ch select-ch value loading? focused? suggestions highlighted-index]}]
-      (let [display? (and focused? value (not= value ""))
-            display (if display? "block" "none")
-            attrs #js {:className "dropdown-menu"
-                       :style #js {:display display}}]
-        (if loading?
-          (dom/ul attrs
-            (om/build loading-view app {:opts loading-view-opts}))
-          (apply dom/ul attrs
-            (map-indexed
+      (apply dom/ul
+             #js {:className "dropdown-menu"}
+             (map-indexed
               (fn [idx item]
                 (om/build render-item app {:init-state
-                                            {:highlight-ch highlight-ch
-                                             :select-ch select-ch}
+                                           {:highlight-ch highlight-ch
+                                            :select-ch select-ch}
                                            :state
-                                            {:item item
-                                             :index idx
-                                             :highlighted-index highlighted-index}
+                                           {:item item
+                                            :index idx
+                                            :highlighted-index highlighted-index}
                                            :opts render-item-opts}))
-              suggestions)))))))
+              suggestions)))))
 
 (defn render-item [app owner {:keys [class-name text-fn]}]
   (reify
@@ -228,6 +223,7 @@
         (dom/li #js {:className (if highlighted? (str "active " class-name) class-name)}
           (dom/a #js {:href "#"}
             (text-fn item index)))))))
+
 ;;;;;;;;;;;;;;;;
 
 (defn app [model owner]
