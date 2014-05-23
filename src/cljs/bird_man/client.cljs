@@ -341,7 +341,7 @@
     om/IRender
     (render [_]
       (log :map-component)
-      (dom/div #js {:id "map"}
+      (dom/figure #js {:id "map"}
         (dom/svg #js {:height (:height svg-dim), :width (:width svg-dim)})))
     om/IDidMount
     (did-mount [_]
