@@ -123,6 +123,12 @@ header {
   margin: auto;
 }
 
+.content .icon-chevron-right {
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+}
+
 #main {
   position: relative;
 }
@@ -188,11 +194,19 @@ header {
   font-size: 12px;
 }
 
+#species .more {
+  text-align: center;
+}
+
+#species .icon-chevron-down {
+  color: #bbb;
+}
+
 #species ul {
   list-style-type: none;
   padding: 0px;
   margin: 0px;
-  max-height: 550px;
+  max-height: 300px;
   overflow-x: hidden;
   overflow-y: scroll;
 }

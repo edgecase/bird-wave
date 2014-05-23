@@ -356,7 +356,9 @@
     om/IRenderState
     (render-state [_ {:keys [input-component results-component]}]
       (dom/div #js {:id "species"}
-        input-component results-component))))
+               input-component results-component
+               (dom/div #js {:className "more"}
+                        (dom/i #js {:className "icon-chevron-down"}))))))
 
 (defn display-name [item idx]
   (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))
