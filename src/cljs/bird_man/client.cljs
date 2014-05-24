@@ -155,6 +155,13 @@
       (apply dom/ul nil
              (om/build-all species-item suggestions)))))
 
+(defn selection-image [model owner]
+  (reify
+    om/IRenderState
+    (render-state [_ state]
+      (log :selection-image (:current-taxon model)) ;; need common name here to get pic
+      (dom/img #js {:id "selection-image" :src "http://placekitten.com/200/200"}))))
+
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 
@@ -476,13 +483,23 @@
                           :results-view-opts {:render-item render-item
                                               :render-item-opts {:class-name "taxon"
                                                                  :text-fn display-name}}}})
+        (om/build selection-image model)
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})
         (om/build map-component model)))))
 
-
+(defn open-section []
+  (let [heading (-> js/d3 (.select (target)))
+        open (not (-> heading (.classed "closed")))
+        y-scroll (if open -650 650)]
+    (-> heading
+        (.classed "closed" open))
+    (.scrollBy js/window 0 y-scroll))) ;; mind-blown.gif
 
 (defn ^:export start []
-  (om/root app model {:target (.getElementById js/document "main")}))
+  (om/root app model {:target (.getElementById js/document "main")})
+  ( -> js/d3
+       (.select ".content h2")
+       (.on "click" open-section)))
 
 (defn ^:export info []
   (log (dissoc @model :taxonomy)))
