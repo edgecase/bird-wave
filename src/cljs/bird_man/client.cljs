@@ -57,49 +57,6 @@
   (let [{:keys [current-taxon time-period]} @model]
     (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
-(defn species-filter [model owner]
-  (reify
-    om/IDidMount
-    (did-mount [_]
-      (log "!!!!!!!!!!")
-      (put! (om/get-state owner :focus-ch) true)
-      #_(put! (om/get-state owner :value-ch) "a"))
-    om/IRenderState
-    (render-state [_ {:keys [value-ch highlight-ch select-ch value highlighted-index]}]
-      (dom/input #js {:type "text"
-                      :value value
-                      :autoComplete "off"
-                      :spellCheck "false"
-                      :placeholder "search for species"
-                      :className "typeahead"
-                      :onKeyDown (fn [e]
-                                   (case (.-keyCode e)
-                                     40 (put! highlight-ch (inc highlighted-index))
-                                     38 (put! highlight-ch (dec highlighted-index))
-                                     13 (put! select-ch (or highlighted-index 0))
-                                     nil))
-                      :onChange #(put! value-ch (.. % -target -value))}
-                 (dom/i #js {:className "icon-search"})))))
-
-(defn species-item [model owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [item idx]}]
-        (dom/li #js {:className "taxon"}
-          (dom/a #js {:href (taxon-path (:taxon/order item))}
-                 (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))))))
-
-(defn species-list [model owner]
-  (reify
-    om/IDidMount
-    (did-mount [_]
-      (log :species-list :mount))
-    om/IRenderState
-    (render-state [_ {:keys [highlight-ch select-ch value loading? focused? suggestions highlighted-index]}]
-      (log :species-list :render)
-      (apply dom/ul nil
-             (om/build-all species-item suggestions)))))
-
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 
@@ -126,18 +83,11 @@
     (did-mount [_]
       (init-axis ".axis"))))
 
-
-
-
-
 (defn get-birds [model]
   (js/d3.json "species"
               (fn [species]
                 (let [taxonomy (map keywordize-keys (js->clj species))]
                   (om/update! model :taxonomy (vec taxonomy))))))
-
-
-
 
 (defn filter-taxonomy [taxonomy filter-text]
   (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
@@ -162,69 +112,83 @@
       (init-map "#map svg" model)
       (get-birds model))))
 
-(defn ac-container [_ _ {:keys [class-name]}]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [input-component results-component]}]
-      (dom/div #js {:id "species"}
-        input-component results-component))))
-
 (defn display-name [item idx]
   (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))
 
+
 ;;;;;;;;;;;;;;;;
 
-(defn results-view [app _ {:keys [class-name
-                                  loading-view loading-view-opts
-                                  render-item render-item-opts]}]
+(defn species-item [model owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [highlight-ch select-ch value loading? focused? suggestions highlighted-index]}]
-      (apply dom/ul
-             #js {:className "dropdown-menu"}
-             (map-indexed
-              (fn [idx item]
-                (om/build render-item app {:init-state
-                                           {:highlight-ch highlight-ch
-                                            :select-ch select-ch}
-                                           :state
-                                           {:item item
-                                            :index idx
-                                            :highlighted-index highlighted-index}
-                                           :opts render-item-opts}))
-              suggestions)))))
+    (render-state [_ state]
+      (dom/li #js {:className "taxon"}
+        (dom/a #js {:href (taxon-path (:taxon/order model))}
+               (first (filter not-empty [(:taxon/subspecies-common-name model) (:taxon/common-name model)])))))))
 
-(defn render-item [app owner {:keys [class-name text-fn]}]
+(defn species-list [model owner]
+  (reify
+    om/IDidMount
+    (did-mount [_]
+      (log :species-list :mount))
+    om/IRenderState
+    (render-state [_ {:keys [filtered-list highlighted selected select-ch]}]
+      (log :species-list :render filtered-list)
+      (apply dom/ul nil
+             (om/build-all species-item filtered-list)))))
+
+(defn input-view [model owner]
+  (reify
+    om/IRenderState
+    (render-state [_ {:keys [input-ch control-ch filter-value]}]
+      (dom/input
+        #js {:type "text"
+             :autoComplete "off"
+             :spellCheck "false"
+             :className "form-control"
+             :placeholder "search for species"
+             :value filter-value
+             :onKeyDown (fn [e]
+                          (case (.-keyCode e)
+                            40 (put! input-ch [:up])
+                            38 (put! input-ch [:down])
+                            13 (put! input-ch [:select])
+                            nil))
+             :onChange #(put! input-ch [:value (.. % -target -value)])}))))
+
+(defn autocomplete [model owner {:keys [select-ch control-ch filter-fn]}]
   (reify
     om/IInitState
     (init-state [_]
-      {:click-ch (chan)})
+      {:input-ch (chan)
+       :internal-select-ch (chan)
+       :filter-value ""
+       :highlighted nil
+       :selected nil
+       :filtered-list model})
 
     om/IWillMount
     (will-mount [_]
-      (let [click-ch (om/get-state owner :click-ch)
-            select-ch (om/get-state owner :select-ch)]
-        (go (loop []
-          (<! click-ch)
-          (put! select-ch (om/get-state owner :index))))))
-
-    om/IDidMount
-    (did-mount [this]
-      (let [index (om/get-state owner :index)
-            highlight-ch (om/get-state owner :highlight-ch)
-            click-ch (om/get-state owner :click-ch)
-            node (om/get-node owner)]
-        (events/listen node (.-MOUSEOVER events/EventType) #(put! highlight-ch index))
-        (events/listen node (.-CLICK events/EventType) #(put! click-ch true))))
+      )
 
     om/IRenderState
-    (render-state [_ {:keys [click-ch select-ch item index highlighted-index]}]
-      (let [highlighted? (= index highlighted-index)]
-        (dom/li #js {:className (if highlighted? (str "active " class-name) class-name)}
-          (dom/a #js {:href "#"}
-            (text-fn item index)))))))
+    (render-state [_ {:keys [input-ch highlighted
+                             filter-value filtered-list
+                             selected internal-select-ch]}]
+      (dom/div #js {:id "species"}
+        (om/build input-view model {:init-state {:input-ch input-ch
+                                                 :filter-value filter-value
+                                                 :control-ch control-ch}})
+        (om/build species-list model {:state {:filtered-list model
+                                              :highlighted highlighted
+                                              :selected selected
+                                              :select-ch internal-select-ch}}))
+      )))
 
-;;;;;;;;;;;;;;;;
+
+
+
+;;;;;;;;;;
 
 (defn app [model owner]
   (reify
@@ -269,18 +233,11 @@
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build ac/autocomplete model
-                  {:opts {:result-ch species-ch
-                          :suggestions-fn (fn [value suggestions-ch cancel-ch]
-                                            (put! suggestions-ch (filter-taxonomy (:taxonomy model) value)))
-                          :container-view ac-container
-                          :container-view-opts {}
-                          :input-view species-filter
-                          :input-view-opts {}
-                          :results-view results-view
-                          :results-view-opts {:render-item render-item
-                                              :render-item-opts {:class-name "taxon"
-                                                                 :text-fn display-name}}}})
+        (om/build autocomplete (:taxonomy model)
+                  {:opts {:select-ch species-ch
+                          :control-ch nil
+                          :filter-fn (fn [item filter-value]
+                                       item)}})
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})
         (om/build map-component model)))))
 
