@@ -121,21 +121,21 @@
 (defn species-item [model owner]
   (reify
     om/IRenderState
-    (render-state [_ state]
-      (dom/li #js {:className "taxon"}
-        (dom/a #js {:href (taxon-path (:taxon/order model))}
+    (render-state [_ {:keys [highlighted selected select-ch]}]
+      (dom/li #js {:className (str "taxon"
+                                   (if (= model highlighted) " highlighted")
+                                   (if (= model selected) " active"))}
+        (dom/a #js {:href (taxon-path (:taxon/order model))
+                    :onClick (fn [e] (.preventDefault e) (put! select-ch model))}
                (first (filter not-empty [(:taxon/subspecies-common-name model) (:taxon/common-name model)])))))))
 
 (defn species-list [model owner]
   (reify
-    om/IDidMount
-    (did-mount [_]
-      (log :species-list :mount))
     om/IRenderState
-    (render-state [_ {:keys [filtered-list highlighted selected select-ch]}]
-      (log :species-list :render filtered-list)
+    (render-state [_ {:keys [filtered-list] :as state}]
       (apply dom/ul nil
-             (om/build-all species-item filtered-list)))))
+             (om/build-all species-item filtered-list
+                           {:state (select-keys state [:highlighted :selected :select-ch])})))))
 
 (defn input-view [model owner]
   (reify
@@ -150,8 +150,8 @@
              :value filter-value
              :onKeyDown (fn [e]
                           (case (.-keyCode e)
-                            40 (put! input-ch [:up])
-                            38 (put! input-ch [:down])
+                            40 (put! input-ch [:down])
+                            38 (put! input-ch [:up])
                             13 (put! input-ch [:select])
                             nil))
              :onChange #(put! input-ch [:value (.. % -target -value)])}))))
@@ -163,26 +163,37 @@
       {:input-ch (chan)
        :internal-select-ch (chan)
        :filter-value ""
-       :highlighted nil
-       :selected nil
-       :filtered-list model})
+       :highlighted-index -1
+       :selected nil})
 
     om/IWillMount
     (will-mount [_]
-      )
+      (let [input-ch (om/get-state owner :input-ch)]
+        (go-loop []
+          (let [[event value] (<! input-ch)
+                highlighted-index (om/get-state owner :highlighted-index)]
+            (case event
+              :up (if (>= highlighted-index 0)
+                    (om/update-state! owner #(assoc % :highlighted-index (dec highlighted-index))))
+              :down (om/update-state! owner #(assoc % :highlighted-index (inc highlighted-index)))
+              :select nil
+              :value (om/update-state! owner #(assoc % :filter-value value, :highlighted-index -1))
+              nil))
+          (recur))))
 
     om/IRenderState
-    (render-state [_ {:keys [input-ch highlighted
-                             filter-value filtered-list
+    (render-state [_ {:keys [input-ch highlighted-index filter-value
                              selected internal-select-ch]}]
-      (dom/div #js {:id "species"}
-        (om/build input-view model {:init-state {:input-ch input-ch
-                                                 :filter-value filter-value
-                                                 :control-ch control-ch}})
-        (om/build species-list model {:state {:filtered-list model
-                                              :highlighted highlighted
-                                              :selected selected
-                                              :select-ch internal-select-ch}}))
+      (let [filtered-list (filter-taxonomy model filter-value)
+            highlighted (try (nth filtered-list highlighted-index) (catch js/Error e))]
+        (dom/div #js {:id "species"}
+          (om/build input-view model {:init-state {:input-ch input-ch
+                                                   :filter-value filter-value
+                                                   :control-ch control-ch}})
+          (om/build species-list model {:state {:filtered-list filtered-list
+                                                :highlighted highlighted
+                                                :selected selected
+                                                :select-ch internal-select-ch}})))
       )))
 
 
