@@ -172,7 +172,8 @@
 
     om/IWillMount
     (will-mount [_]
-      (let [input-ch (om/get-state owner :input-ch)]
+      (let [input-ch (om/get-state owner :input-ch)
+            internal-select-ch (om/get-state owner :internal-select-ch)]
         (go-loop []
           (let [[event value] (<! input-ch)
                 highlighted-index (om/get-state owner :highlighted-index)]
@@ -180,9 +181,18 @@
               :up (if (>= highlighted-index 0)
                     (om/update-state! owner #(assoc % :highlighted-index (dec highlighted-index))))
               :down (om/update-state! owner #(assoc % :highlighted-index (inc highlighted-index)))
-              :select nil
               :value (om/update-state! owner #(assoc % :filter-value value, :highlighted-index -1))
+              :select (let [filtered-list (filter-taxonomy @model (om/get-state owner :filter-value))
+                            highlighted (try (nth filtered-list highlighted-index)
+                                             (catch js/Error e))]
+                        (if highlighted
+                          (put! internal-select-ch highlighted)))
               nil))
+          (recur))
+        (go-loop []
+          (let [selection (<! internal-select-ch)]
+            (om/set-state! owner :selected selection)
+            (put! select-ch selection))
           (recur))))
 
     om/IRenderState
@@ -229,8 +239,8 @@
                               (om/update! model :time-period new-time-period)
                               (push-state model history)
                               (update-map! model))
-            species-ch ([[idx result]]
-                          (om/update! model :current-taxon (:taxon/order @result))
+            species-ch ([result]
+                          (om/update! model :current-taxon (:taxon/order result))
                           (push-state model history)
                           (update-map! model))
             history-ch ([{:keys [current-taxon time-period]}]
