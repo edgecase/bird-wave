@@ -154,7 +154,11 @@
                             38 (put! input-ch [:up])
                             13 (put! input-ch [:select])
                             nil))
-             :onChange #(put! input-ch [:value (.. % -target -value)])}))))
+             :onChange #(put! input-ch [:value (.. % -target -value)])}))
+
+    om/IDidMount
+    (did-mount [_]
+      (.focus (om/get-node owner)))))
 
 (defn autocomplete [model owner {:keys [select-ch control-ch filter-fn]}]
   (reify
