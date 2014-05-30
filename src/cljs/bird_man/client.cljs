@@ -8,9 +8,8 @@
             [goog.events :as events]
             [ankha.core :as ankha]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
-            [arosequist.om-autocomplete :as ac]
             [bird-man.map :refer (init-axis color active-state zoom zoom-duration
-                                  svg-dim state-to-activate active-attrs
+                                  svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-counties make-frequencies)])
 
   (:import goog.History
@@ -57,30 +56,6 @@
   (let [{:keys [current-taxon time-period]} @model]
     (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
-(defn species-filter [model owner]
-  (reify
-    om/IDidMount
-    (did-mount [_]
-      (log "!!!!!!!!!!")
-      (put! (om/get-state owner :focus-ch) true)
-      #_(put! (om/get-state owner :value-ch) "a"))
-    om/IRenderState
-    (render-state [_ {:keys [value-ch highlight-ch select-ch value highlighted-index]}]
-      (dom/input #js {:type "text"
-                      :value value
-                      :autoComplete "off"
-                      :spellCheck "false"
-                      :placeholder "search for species"
-                      :className "typeahead"
-                      :onKeyDown (fn [e]
-                                   (case (.-keyCode e)
-                                     40 (put! highlight-ch (inc highlighted-index))
-                                     38 (put! highlight-ch (dec highlighted-index))
-                                     13 (put! select-ch (or highlighted-index 0))
-                                     nil))
-                      :onChange #(put! value-ch (.. % -target -value))}
-                 (dom/i #js {:className "icon-search"})))))
-
 (defn species-item [model owner]
   (reify
     om/IRenderState
@@ -88,17 +63,6 @@
         (dom/li #js {:className "taxon"}
           (dom/a #js {:href (taxon-path (:taxon/order item))}
                  (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))))))
-
-(defn species-list [model owner]
-  (reify
-    om/IDidMount
-    (did-mount [_]
-      (log :species-list :mount))
-    om/IRenderState
-    (render-state [_ {:keys [highlight-ch select-ch value loading? focused? suggestions highlighted-index]}]
-      (log :species-list :render)
-      (apply dom/ul nil
-             (om/build-all species-item suggestions)))))
 
 (defn selection-image [model owner]
   (reify
@@ -204,7 +168,8 @@
                             38 (put! input-ch [:up])
                             13 (put! input-ch [:select])
                             nil))
-             :onChange #(put! input-ch [:value (.. % -target -value)])}))
+             :onChange #(put! input-ch [:value (.. % -target -value)])}
+        (dom/i #js {:className "icon-search"})))
 
     om/IDidMount
     (did-mount [_]
@@ -251,14 +216,15 @@
       (let [filtered-list (filter-taxonomy model filter-value)
             highlighted (try (nth filtered-list highlighted-index) (catch js/Error e))]
         (dom/div #js {:id "species"}
-          (om/build input-view model {:init-state {:input-ch input-ch
-                                                   :filter-value filter-value
-                                                   :control-ch control-ch}})
-          (om/build species-list model {:state {:filtered-list filtered-list
-                                                :highlighted highlighted
-                                                :selected selected
-                                                :select-ch internal-select-ch}})))
-      )))
+                 (om/build input-view model {:init-state {:input-ch input-ch
+                                                          :filter-value filter-value
+                                                          :control-ch control-ch}})
+                 (om/build species-list model {:state {:filtered-list filtered-list
+                                                       :highlighted highlighted
+                                                       :selected selected
+                                                       :select-ch internal-select-ch}})
+                 (dom/div #js {:className "more"}
+                          (dom/i #js {:className "icon-chevron-down"})))))))
 
 
 
@@ -318,17 +284,19 @@
         (om/build map-component model)))))
 
 (defn open-section []
-  (let [heading (-> js/d3 (.select (target)))
-        open (not (-> heading (.classed "closed")))
-        y-scroll (if open -650 650)]
-    (-> heading
-        (.classed "closed" open))
-    (.scrollBy js/window 0 y-scroll))) ;; mind-blown.gif
+  (let [section (-> js/d3
+                    (.select (target))
+                    (.node)
+                    (.-parentNode))
+        selection (.select js/d3 section)
+        open (not (-> selection (.classed "closed")))]
+    (-> selection
+        (.classed "closed" open))))
 
 (defn ^:export start []
   (om/root app model {:target (.getElementById js/document "main")})
   ( -> js/d3
-       (.select ".content h2")
+       (.select "#how-this-works h2")
        (.on "click" open-section)))
 
 (defn ^:export info []
