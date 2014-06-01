@@ -56,14 +56,6 @@
   (let [{:keys [current-taxon time-period]} @model]
     (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
-(defn species-item [model owner]
-  (reify
-    om/IRenderState
-    (render-state [_ {:keys [item idx]}]
-        (dom/li #js {:className "taxon"}
-          (dom/a #js {:href (taxon-path (:taxon/order item))}
-                 (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))))))
-
 (defn selection-image [model owner]
   (reify
     om/IRenderState
@@ -126,8 +118,8 @@
       (init-map "#map svg" model)
       (get-birds model))))
 
-(defn display-name [item idx]
-  (first (filter not-empty [(:taxon/subspecies-common-name item) (:taxon/common-name item)])))
+(defn display-name [species]
+  (first (filter not-empty [(:taxon/subspecies-common-name species) (:taxon/common-name species)])))
 
 
 ;;;;;;;;;;;;;;;;
@@ -140,8 +132,8 @@
                                    (if (= model highlighted) " highlighted")
                                    (if (= model selected) " active"))}
         (dom/a #js {:href (taxon-path (:taxon/order model))
-                    :onClick (fn [e] (.preventDefault e) (put! select-ch model))}
-               (first (filter not-empty [(:taxon/subspecies-common-name model) (:taxon/common-name model)])))))))
+                    :onClick (fn [e] (.preventDefault e) (put! select-ch @model))}
+               (display-name model))))))
 
 (defn species-list [model owner]
   (reify
