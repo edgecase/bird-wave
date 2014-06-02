@@ -74,7 +74,7 @@
   (reify
     om/IRenderState
     (render-state [_ state]
-      (dom/img #js {:id "selection-image" :src (str "//yourshot.nationalgeographic.com/" (:grid_thumbnail_url (:photo model)))}))))
+      (dom/img #js {:id "selection-image" :src (str "//yourshot.nationalgeographic.com" (:grid_thumbnail_url (:photo model)))}))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
