@@ -21,9 +21,11 @@
 
 
 (def model (atom {:current-taxon nil
+                  :current-name ""
                   :time-period nil     ; selected month
                   :taxonomy []      ; all taxons
-                  :frequencies {}}))
+                  :frequencies {}
+                  :photo {}}))
 
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period]} @model
@@ -34,6 +36,18 @@
                                     (make-frequencies data))
                         (update-counties (:frequencies @model)))))))
 
+(defn first-photo [photos]
+  (-> photos
+      (js->clj)
+      (keywordize-keys)
+      (:photos)
+      (first)))
+
+(defn update-photo! [model]
+  (let [{:keys [current-name]} @model
+        url (str "//yourshot.nationalgeographic.com/rpc/search/photos/?q=" (.toLowerCase current-name))]
+    (js/d3.json url (fn [data]
+                      (om/update! model :photo (first-photo data))))))
 
 (defn taxon-path [taxon]
   (str "/#/taxon/" taxon))
@@ -60,8 +74,7 @@
   (reify
     om/IRenderState
     (render-state [_ state]
-      (log :selection-image (:current-taxon model)) ;; need common name here to get pic
-      (dom/img #js {:id "selection-image" :src "http://placekitten.com/200/200"}))))
+      (dom/img #js {:id "selection-image" :src (str "//yourshot.nationalgeographic.com/" (:grid_thumbnail_url (:photo model)))}))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
@@ -102,6 +115,10 @@
                                                          (:taxon/common-name taxon)))]
                      (re-find filter-re species-name)))
                  taxonomy))))
+
+(defn species-for-order [order taxonomy]
+  (first (filter (fn [taxon]
+                   (= order (:taxon/order taxon))) taxonomy)))
 
 (defn map-component [model owner]
   (reify
@@ -146,7 +163,7 @@
 (defn input-view [model owner]
   (reify
     om/IRenderState
-    (render-state [_ {:keys [input-ch control-ch filter-value]}]
+    (render-state [_ {:keys [input-ch filter-value]}]
       (dom/input
         #js {:type "text"
              :autoComplete "off"
@@ -208,18 +225,13 @@
       (let [filtered-list (filter-taxonomy model filter-value)
             highlighted (try (nth filtered-list highlighted-index) (catch js/Error e))]
         (dom/div #js {:id "species"}
-                 (om/build input-view model {:init-state {:input-ch input-ch
-                                                          :filter-value filter-value
-                                                          :control-ch control-ch}})
+                 (om/build input-view model {:init-state {:input-ch input-ch}})
                  (om/build species-list model {:state {:filtered-list filtered-list
                                                        :highlighted highlighted
                                                        :selected selected
                                                        :select-ch internal-select-ch}})
                  (dom/div #js {:className "more"}
                           (dom/i #js {:className "icon-chevron-down"})))))))
-
-
-
 
 ;;;;;;;;;;
 
@@ -244,33 +256,34 @@
         (go-loop []
           (alt!
             time-period-ch ([new-time-period]
-                              (om/update! model :time-period new-time-period)
-                              (push-state model history)
-                              (update-map! model))
+                            (om/update! model :time-period new-time-period)
+                            (push-state model history)
+                            (update-map! model))
             species-ch ([result]
-                          (om/update! model :current-taxon (:taxon/order result))
-                          (push-state model history)
-                          (update-map! model))
+                        (om/update! model :current-taxon (:taxon/order result))
+                        (om/update! model :current-name (display-name result))
+                        (push-state model history)
+                        (update-map! model)
+                        (update-photo! model))
             history-ch ([{:keys [current-taxon time-period]}]
-                          (log :history-ch)
-                          (let [use-defaults? (not (and current-taxon time-period))
-                                taxon (or current-taxon (:taxon/order (rand-nth (:taxonomy @model))))
-                                time (or time-period (first dates))]
-                            (om/update! model :current-taxon taxon)
-                            (om/update! model :time-period time)
-                            (update-map! model)
-                            (when use-defaults?
-                              (push-state model history)))))
-          (recur))))
+                        (log :history-ch)
+                        (let [use-defaults? (not (and current-taxon time-period))
+                              taxon (or current-taxon (:taxon/order (rand-nth (:taxonomy @model))))
+                              time (or time-period (first dates))]
+                          (om/update! model :current-taxon taxon)
+                          (om/update! model :current-name (display-name (species-for-order taxon (:taxonomy @model))))
+                          (om/update! model :time-period time)
+                          (update-map! model)
+                          (update-photo! model)
+                          (when use-defaults?
+                            (push-state model history)))))
+                 (recur))))
 
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
         (om/build autocomplete (:taxonomy model)
-                  {:opts {:select-ch species-ch
-                          :control-ch nil
-                          :filter-fn (fn [item filter-value]
-                                       item)}})
+                  {:opts {:select-ch species-ch}})
         (om/build selection-image model)
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})
         (om/build map-component model)))))
@@ -292,4 +305,4 @@
        (.on "click" open-section)))
 
 (defn ^:export info []
-  (log (dissoc @model :taxonomy)))
+  (log (dissoc @model :taxonomy :frequencies)))
