@@ -133,7 +133,12 @@
         (.append "text")
         (.classed "legend" true)
         (.text "Scale represents the ratio of birds sighted to number of sightings")
-        (.attr "transform", (str "translate(" (- s-width 390) "," (- s-height 5) ")")))
+        (.attr "transform", (str "translate(" (- s-width 390) "," (- s-height 20) ")")))
+    (-> svg
+        (.append "text")
+        (.classed "legend" true)
+        (.text "eBird Basic Dataset. Version: EBD_relNov-2013. Cornell Lab of Ornithology, Ithaca, New York. November 2013.")
+        (.attr "transform", (str "translate(" (- s-width 627) "," (- s-height 5) ")")))
     (-> svg
         (.append "g")
         (.classed "axis" true)
