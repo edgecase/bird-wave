@@ -71,6 +71,10 @@ body p {
   line-height: 1.3em;
 }
 
+a, a:visited {
+  color: inherit;
+}
+
 header {
   position: fixed;
   z-index: 2;
@@ -194,7 +198,7 @@ header {
   list-style-type: none;
   padding: 0px;
   margin: 0px;
-  height: 250px;
+  height: 230px;
   overflow-x: hidden;
   overflow-y: scroll;
 }
@@ -236,10 +240,27 @@ header {
   position: absolute;
   bottom: 0px;
   right: 0px;
+}
+
+.photo {
   height: 200px;
   width: 200px;
   border: 4px solid #c7e9b4;
   border-radius: 100px;
+}
+
+.icon {
+  height: 14px;
+  margin: 0 2px;
+}
+
+.attribution {
+  font-size: 12px;
+  padding: 5px;
+}
+
+.overlay {
+  display: none;
 }
 
 #how-this-works {
@@ -290,10 +311,6 @@ header {
   opacity: 0;
   -webkit-transition: opacity 0.5s;
   transition: opacity 0.5s;
-}
-
-#how-this-works a, #how-this-works a:visited {
-  color: #fff;
 }
 
 

@@ -10,7 +10,8 @@
             [cljs.core.async :as async :refer (chan put! <! timeout)]
             [bird-man.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
-                                  prevent-zoom-on-drag init-map update-counties make-frequencies)])
+                                  prevent-zoom-on-drag init-map update-counties make-frequencies)]
+            [bird-man.flickr :refer (search-query info-query)])
 
   (:import goog.History
            goog.history.EventType))
@@ -19,6 +20,8 @@
   (if js/window.__birdman_debug__
     (.log js/console (pr-str args))))
 
+(defn try-with-default [m k default]
+  (if (seq m) (k m) default))
 
 (def model (atom {:current-taxon nil
                   :current-name ""
@@ -41,11 +44,12 @@
       (js->clj)
       (keywordize-keys)
       (:photos)
+      (:photo)
       (first)))
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model
-        url (str "//yourshot.nationalgeographic.com/rpc/search/photos/?q=" (.toLowerCase current-name))]
+        url (search-query (.toLowerCase current-name) 1)]
     (js/d3.json url (fn [data]
                       (om/update! model :photo (first-photo data))))))
 
@@ -74,7 +78,19 @@
   (reify
     om/IRenderState
     (render-state [_ state]
-      (dom/img #js {:id "selection-image" :src (str "//yourshot.nationalgeographic.com" (:grid_thumbnail_url (:photo model)))}))))
+      (let [photo (:photo model)
+            photo-url (try-with-default photo :url_q "/images/loading.png")
+            photo-title (try-with-default photo :title "No photo available")
+            className (if (seq photo) "loaded" "no-photo")]
+        (dom/div #js {:id "selection-image" :className className}
+                 (dom/img #js {:className "photo" :src photo-url :title photo-title})
+                 (when (seq photo)
+                   (dom/div #js {:className "attribution"}
+                            "Source: Flickr "
+                            (dom/img #js {:className "icon" :src "/images/cc.svg"})
+                            (dom/img #js {:className "icon" :src "/images/by.svg"})
+                            (dom/a #js {:href "#"} "view attribution")
+                            (dom/div #js {:className "overlay"}))))))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
