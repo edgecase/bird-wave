@@ -11,7 +11,7 @@
             [bird-man.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-counties make-frequencies)]
-            [bird-man.flickr :refer (search-query info-query)])
+            [bird-man.flickr :refer (search-query info-query first-photo)])
 
   (:import goog.History
            goog.history.EventType))
@@ -38,14 +38,6 @@
                         (om/update! model :frequencies
                                     (make-frequencies data))
                         (update-counties (:frequencies @model)))))))
-
-(defn first-photo [photos]
-  (-> photos
-      (js->clj)
-      (keywordize-keys)
-      (:photos)
-      (:photo)
-      (first)))
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model

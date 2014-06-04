@@ -1,5 +1,6 @@
 (ns bird-man.flickr
-  (:require [cemerick.url :refer (url url-encode)]))
+  (:require [cemerick.url :refer (url url-encode)]
+            [clojure.walk :refer (keywordize-keys)]))
 
 (def api-base-url (url "https://api.flickr.com/services/rest/"))
 
@@ -11,6 +12,7 @@
   {:text (str "\"" text "\"")
    :per_page num-photos
    :method "flickr.photos.search"
+   :sort "relevance"
    :license 4
    :extras "owner_name,url_q"})
 
@@ -33,3 +35,12 @@
 
 (defn info-query [photo-id, secret]
   (make-request info-params photo-id secret))
+
+(defn first-photo [photos]
+  (-> photos
+      (js->clj)
+      (keywordize-keys)
+      (:photos)
+      (:photo)
+      (first)))
+
