@@ -260,9 +260,41 @@ header {
   color: #333;
 }
 
-.overlay {
+.no-photo .attribution {
   display: none;
 }
+
+.detail.fetched {
+  -webkit-animation: highlight 1s ease-in;
+  -moz-animation: highlight 1s ease-in;
+  animation: highlight 1s ease-in;
+}
+
+@-webkit-keyframes highlight {
+  0% {
+    background-color: #c7e9b4;
+    color: black;
+  }
+}
+@-moz-keyframes highlight {
+  0% {
+    background-color: #c7e9b4;
+    color: black;
+  }
+}
+@-o-keyframes highlight {
+  0% {
+    background-color: #c7e9b4;
+    color: black;
+  }
+}
+@keyframes highlight {
+  0% {
+    background-color: #c7e9b4;
+    color: black;
+  }
+}
+
 
 #how-this-works {
   max-height: 700px;
@@ -271,12 +303,14 @@ header {
   color: #eee;
   padding: 70px 10px 5px;
   -webkit-transition: max-height 1s;
+  -moz-transition: max-height 1s;
   transition: max-height 1s;
 }
 
 #how-this-works.closed {
   max-height: 110px;
   -webkit-transition: max-height 1s;
+  -moz-transition: max-height 1s;
   transition: max-height 1s;
 }
 
@@ -291,12 +325,14 @@ header {
   font-size: 16px;
   display: inline;
   -webkit-transition: margin-left .5s;
+  -moz-transition: margin-left .5s;
   transition: margin-left .5s;
 }
 
 #how-this-works h2:hover > .icon-chevron-right {
   margin-left: 5px;
   -webkit-transition: margin-left .5s;
+  -moz-transition: margin-left .5s;
   transition: margin-left .5s;
 }
 
@@ -304,6 +340,8 @@ header {
   opacity: 1;
   -webkit-transition: opacity 0.5s;
   -webkit-transition-delay: 0.5s;
+  -moz-transition: opacity 0.5s;
+  -moz-transition-delay: 0.5s;
   transition: opacity 0.5s;
   transition-delay: 0.5s;
 }
@@ -311,6 +349,7 @@ header {
 #how-this-works.closed p {
   opacity: 0;
   -webkit-transition: opacity 0.5s;
+  -moz-transition: opacity 0.5s;
   transition: opacity 0.5s;
 }
 

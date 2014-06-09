@@ -1,8 +1,11 @@
 (ns bird-man.client
-  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)])
+  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)]
+                   [kioo.om :refer [defsnippet deftemplate]])
   (:require [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
+            [kioo.om :refer [content set-attr set-class do-> substitute listen]]
+            [kioo.core :refer [handle-wrapper]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [goog.events :as events]
@@ -11,7 +14,7 @@
             [bird-man.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-counties make-frequencies)]
-            [bird-man.flickr :refer (search-query info-query first-photo)])
+            [bird-man.flickr :refer (search-query info-query first-photo attribution)])
 
   (:import goog.History
            goog.history.EventType))
@@ -66,23 +69,28 @@
   (let [{:keys [current-taxon time-period]} @model]
     (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
-(defn selection-image [model owner]
-  (reify
-    om/IRenderState
-    (render-state [_ state]
-      (let [photo (:photo model)
-            photo-url (try-with-default photo :url_q "/images/loading.png")
-            photo-title (try-with-default photo :title "No photo available")
-            className (if (seq photo) "loaded" "no-photo")]
-        (dom/div #js {:id "selection-image" :className className}
-                 (dom/img #js {:className "photo" :src photo-url :title photo-title})
-                 (when (seq photo)
-                   (dom/div #js {:className "attribution"}
-                            "Source: Flickr "
-                            (dom/img #js {:className "icon" :src "/images/cc.svg"})
-                            (dom/img #js {:className "icon" :src "/images/by.svg"})
-                            (dom/a #js {:href "#"} "view attribution")
-                            (dom/div #js {:className "overlay"}))))))))
+(defn fetch-attribution [e model]
+  (let [photo-id (:id @model)
+        secret (:secret @model)
+        url (info-query photo-id secret)]
+    (.preventDefault e)
+    (js/d3.json url (fn [data]
+                      (om/update! model :attribution (attribution data))))))
+
+(deftemplate selection-image "templates/selection-image.html" [model owner]
+  {[:#selection-image] (set-class (if (seq model) "loaded" "no-photo"))
+   [:.photo] (do->
+               (set-attr :src (try-with-default model :url_q "/images/loading.png"))
+               (set-attr :title (try-with-default model :title (str "No photo available for " (:current-name model)))))
+   [:.detail] (if (seq (:attribution model))
+                (do->
+                  (set-attr :href (get-in model [:attribution :url]))
+                  (set-attr :onClick nil)
+                  (set-class "detail fetched")
+                  (content (get-in model [:attribution :by])))
+                (do->
+                  (set-class "detail")
+                  (set-attr :onClick #(fetch-attribution % model))))})
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
@@ -292,7 +300,7 @@
       (dom/div nil
         (om/build autocomplete (:taxonomy model)
                   {:opts {:select-ch species-ch}})
-        (om/build selection-image model)
+        (om/build selection-image (:photo model))
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})
         (om/build map-component model)))))
 
