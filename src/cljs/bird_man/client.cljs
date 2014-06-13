@@ -166,7 +166,13 @@
                                    (if (= model selected) " active"))}
         (dom/a #js {:href (taxon-path (:taxon/order model))
                     :onClick (fn [e] (.preventDefault e) (put! select-ch @model))}
-               (display-name model))))))
+               (display-name model))))
+
+    om/IDidUpdate
+    (did-update [_ prev-props prev-state]
+      (if (and (= model (om/get-state owner :highlighted))
+               (not= model (:highlighted prev-state)))
+        (.scrollIntoViewIfNeeded (om/get-node owner))))))
 
 (defn species-list [model owner]
   (reify
