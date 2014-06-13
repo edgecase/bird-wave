@@ -108,7 +108,7 @@
             (dom/input #js
               {:type "range"
                :min 0
-               :max 11
+               :max (dec (count dates))
                :value val
                :onChange (fn [e] (put! (om/get-state owner :time-period-ch)
                                        (get dates (js/parseInt (.. e -target -value)))))}))
