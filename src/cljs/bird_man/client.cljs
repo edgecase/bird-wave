@@ -79,9 +79,8 @@
 
 (deftemplate selection-image "templates/selection-image.html" [model owner]
   {[:#selection-image] (set-class (if (seq model) "loaded" "no-photo"))
-   [:.photo] (do->
-               (set-attr :src (try-with-default model :url_q "/images/loading.png"))
-               (set-attr :title (try-with-default model :title "No photo available")))
+   [:.photo] (set-attr :src (try-with-default model :url_q "/images/loading.png"))
+   [:.title] (content (try-with-default model :title "No photo available"))
    [:.detail] (if (seq (:attribution model))
                 (do->
                   (set-attr :href (get-in model [:attribution :url]))
