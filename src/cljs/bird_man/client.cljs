@@ -113,7 +113,7 @@
             (dom/input #js
               {:type "range"
                :min 0
-               :max 11
+               :max (dec (count dates))
                :value val
                :onChange (fn [e] (put! (om/get-state owner :time-period-ch)
                                        (get dates (js/parseInt (.. e -target -value)))))}))
@@ -171,7 +171,13 @@
                                    (if (= model selected) " active"))}
         (dom/a #js {:href (taxon-path (:taxon/order model))
                     :onClick (fn [e] (.preventDefault e) (put! select-ch @model))}
-               (display-name model))))))
+               (display-name model))))
+
+    om/IDidUpdate
+    (did-update [_ prev-props prev-state]
+      (if (and (= model (om/get-state owner :highlighted))
+               (not= model (:highlighted prev-state)))
+        (.scrollIntoViewIfNeeded (om/get-node owner))))))
 
 (defn species-list [model owner]
   (reify
@@ -192,13 +198,21 @@
              :className "form-control"
              :placeholder "search for species"
              :value filter-value
+             :onChange #(put! input-ch [:value (.. % -target -value)])
              :onKeyDown (fn [e]
-                          (case (.-keyCode e)
-                            40 (put! input-ch [:down])
-                            38 (put! input-ch [:up])
-                            13 (put! input-ch [:select])
-                            nil))
-             :onChange #(put! input-ch [:value (.. % -target -value)])}
+                          (let [key-code (.-keyCode e)
+                                ctrl? (.-ctrlKey e)
+                                message (cond 
+                                         (= 40 key-code) [:down]
+                                         (and ctrl? (= 78 key-code)) [:down]
+                                         
+                                         (= 38 key-code) [:up]
+                                         (and ctrl? (= 80 key-code)) [:up]
+                                         
+                                         (= 13 key-code) [:select])]
+                            (when message
+                              (.preventDefault e)
+                              (put! input-ch message))))}
         (dom/i #js {:className "icon-search"})))
 
     om/IDidMount
