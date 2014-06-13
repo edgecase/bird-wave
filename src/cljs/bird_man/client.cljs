@@ -187,13 +187,21 @@
              :className "form-control"
              :placeholder "search for species"
              :value filter-value
+             :onChange #(put! input-ch [:value (.. % -target -value)])
              :onKeyDown (fn [e]
-                          (case (.-keyCode e)
-                            40 (put! input-ch [:down])
-                            38 (put! input-ch [:up])
-                            13 (put! input-ch [:select])
-                            nil))
-             :onChange #(put! input-ch [:value (.. % -target -value)])}
+                          (let [key-code (.-keyCode e)
+                                ctrl? (.-ctrlKey e)
+                                message (cond 
+                                         (= 40 key-code) [:down]
+                                         (and ctrl? (= 78 key-code)) [:down]
+                                         
+                                         (= 38 key-code) [:up]
+                                         (and ctrl? (= 80 key-code)) [:up]
+                                         
+                                         (= 13 key-code) [:select])]
+                            (when message
+                              (.preventDefault e)
+                              (put! input-ch message))))}
         (dom/i #js {:className "icon-search"})))
 
     om/IDidMount
