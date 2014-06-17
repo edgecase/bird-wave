@@ -32,7 +32,7 @@
         :preamble ["react/react.js"]
         :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}
       :prod
-      {:source-paths ["src/cljs"  ".lein-git-deps/om-autocomplete/src"]
+      {:source-paths ["src/cljs"]
        :compiler
        {:output-to "resources/public/javascript/client.js"
         :optimizations :advanced
