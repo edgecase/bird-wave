@@ -23,3 +23,11 @@ a backup.
 ## Backing Up
 
 `$ bin/datomic backup-db datomic:dev://localhost:4334/birdman s3://birdman.neo.com/backups/2014/02`
+
+## Deployment
+
+```bash
+$ lein pedestal uberwar
+$ ./scripts/update-stack.sh $PWD/target/bird-man-0.1.0-SNAPSHOT-standalone.war birdman-production
+```
+
