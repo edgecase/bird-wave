@@ -10,13 +10,11 @@
                  [enlive "1.1.5"]
                  [org.clojure/clojurescript "0.0-2202"]
                  [org.clojure/core.async "0.1.301.0-deb34a-alpha"]
-                 [om "0.6.2"]
+                 [om "0.6.4"]
                  [secretary "1.1.0"]
                  [com.cemerick/url "0.1.1"]
                  [kioo "0.4.0"]]
-  :git-dependencies [["https://github.com/arosequist/om-autocomplete.git"]]
-  :plugins      [[lein-git-deps "0.0.2-SNAPSHOT"]
-                 [lein-cljsbuild "1.0.3"]
+  :plugins      [[lein-cljsbuild "1.0.3"]
                  [datomic-schema-grapher "0.0.1"]
                  [ohpauleez/lein-pedestal "0.1.0-beta10"]]
   :source-paths ["src/clj"]
@@ -24,7 +22,7 @@
   :cljsbuild
     {:builds
      {:dev
-      {:source-paths ["src/cljs" "dev/cljs" ".lein-git-deps/om-autocomplete/src"]
+      {:source-paths ["src/cljs" "dev/cljs"]
        :compiler
        {:output-to "resources/public/javascript/build/client-dev.js"
         :output-dir "resources/public/javascript/build"

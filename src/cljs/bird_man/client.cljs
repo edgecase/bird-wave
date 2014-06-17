@@ -147,8 +147,7 @@
     (should-update [_ next-props next-state] false)
     om/IRender
     (render [_]
-      (log :map-component)
-      (dom/figure #js {:id "map"}
+      (dom/div #js {:id "map"}
         (dom/svg #js {:height (:height svg-dim)
                       :width (:width svg-dim)})))
     om/IDidMount
