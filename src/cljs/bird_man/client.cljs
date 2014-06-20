@@ -274,6 +274,16 @@
                  (dom/div #js {:className "more"}
                           (dom/i #js {:className "icon-chevron-down"})))))))
 
+(defn await-taxonomy
+  "Return a channel which will receive the value of :taxonomy after it has a non-empty value"
+  [model]
+  (go-loop []
+    (let [taxonomy (:taxonomy @model)]
+      (if (not-empty taxonomy)
+        taxonomy
+        (do (<! (timeout 10))
+            (recur))))))
+
 ;;;;;;;;;;
 
 (defn app [model owner]
@@ -308,20 +318,21 @@
                         (update-photo! model))
             history-ch ([{:keys [current-taxon time-period]}]
                         (log :history-ch)
-                        (let [use-defaults? (not (and current-taxon time-period))
-                              taxonomy (:taxonomy @model)
-                              time (or time-period (first dates))
-                              taxon (cond
-                                     current-taxon current-taxon
-                                     (empty? taxonomy) default-taxon
-                                     :else (:taxon/order (rand-nth taxonomy)))]
-                          (om/update! model :current-taxon taxon)
-                          (om/update! model :current-name (display-name (species-for-order taxon (:taxonomy @model))))
-                          (om/update! model :time-period time)
-                          (update-map! model)
-                          (update-photo! model)
-                          (when use-defaults?
-                            (push-state model history)))))
+                        (go
+                          (let [use-defaults? (not (and current-taxon time-period))
+                                taxonomy (<! (await-taxonomy model))
+                                time (or time-period (first dates))
+                                taxon (cond
+                                       current-taxon current-taxon
+                                       (empty? taxonomy) default-taxon
+                                       :else (:taxon/order (rand-nth taxonomy)))]
+                            (om/update! model :current-taxon taxon)
+                            (om/update! model :current-name (display-name (species-for-order taxon (:taxonomy @model))))
+                            (om/update! model :time-period time)
+                            (update-map! model)
+                            (update-photo! model)
+                            (when use-defaults?
+                              (push-state model history))))))
                  (recur))))
 
     om/IRenderState
