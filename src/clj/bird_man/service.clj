@@ -43,8 +43,9 @@
        response))))
 
 (deftemplate home-template "templates/index.html" [env]
-  [:#client-script] (set-attr :src (if (= env :prod)
-                                     "/javascript/client.js"
+  [:#client-script] (set-attr :src (case env
+                                     :prod "/javascript/client.js"
+                                     :advanced "/javascript/advanced/client.js"
                                      "/javascript/build/client-dev.js")))
 
 (defn home-page [request]

@@ -30,7 +30,23 @@
         :optimizations :whitespace
         :pretty-print true
         :preamble ["react/react.js"]
-        :externs ["react/externs/react.js" "externs/d3_externs_min.js" "externs/topojson.js"]}}
+        :externs ["react/externs/react.js"
+                  "externs/d3_externs_min.js"
+                  "externs/topojson.js"
+                  "externs/colorbrewer.js"]}}
+      :advanced
+      {:source-paths ["src/cljs"]
+       :compiler
+       {:output-to "resources/public/javascript/advanced/client.js"
+        :output-dir "resources/public/javascript/advanced"
+        :source-map "resources/public/javascript/advanced/client.js.map"
+        :optimizations :advanced
+        :pretty-print false
+        :preamble ["react/react.min.js"]
+        :externs ["react/externs/react.js"
+                  "externs/d3_externs_min.js"
+                  "externs/topojson.js"
+                  "externs/colorbrewer.js"]}}
       :prod
       {:source-paths ["src/cljs"]
        :compiler
