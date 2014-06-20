@@ -13,7 +13,8 @@
             bird-man.database))
 
 (defonce system (atom nil))
-(defonce config (atom {:seed-file "sample_data/birds.txt"
+(defonce config (atom {:env :dev
+                       :seed-file "sample_data/birds.txt"
                        :transactor :mem
                        :batch-size 1000
                        :skip-rows nil
@@ -36,6 +37,7 @@
 (defn init
   "Creates and initializes the system under development"
   []
+  (bird-man.service/set-env (:env @config))
   (reset! system (merge (pedestal-dev/init bird-man.service/service #'bird-man.service/routes)
                         {:db-conn (bird-man.database/init @config)})))
 

@@ -26,10 +26,17 @@
 (defn try-with-default [m k default]
   (if (seq m) (k m) default))
 
+(def default-taxon "2881")
+
 (def model (atom {:current-taxon nil
                   :current-name ""
-                  :time-period nil     ; selected month
-                  :taxonomy []      ; all taxons
+                  :time-period nil
+                  ;; hard code the default taxon :(
+                  :taxonomy [{:taxon/order "2881"
+                              :taxon/subspecies-scientific-name ""
+                              :taxon/scientific-name "Haliaeetus leucocephalus"
+                              :taxon/subspecies-common-name ""
+                              :taxon/common-name "Bald Eagle"}]
                   :frequencies {}
                   :photo {}}))
 
@@ -201,13 +208,13 @@
              :onKeyDown (fn [e]
                           (let [key-code (.-keyCode e)
                                 ctrl? (.-ctrlKey e)
-                                message (cond 
+                                message (cond
                                          (= 40 key-code) [:down]
                                          (and ctrl? (= 78 key-code)) [:down]
-                                         
+
                                          (= 38 key-code) [:up]
                                          (and ctrl? (= 80 key-code)) [:up]
-                                         
+
                                          (= 13 key-code) [:select])]
                             (when message
                               (.preventDefault e)
@@ -302,8 +309,12 @@
             history-ch ([{:keys [current-taxon time-period]}]
                         (log :history-ch)
                         (let [use-defaults? (not (and current-taxon time-period))
-                              taxon (or current-taxon (:taxon/order (rand-nth (:taxonomy @model))))
-                              time (or time-period (first dates))]
+                              taxonomy (:taxonomy @model)
+                              time (or time-period (first dates))
+                              taxon (cond
+                                     current-taxon current-taxon
+                                     (empty? taxonomy) default-taxon
+                                     :else (:taxon/order (rand-nth taxonomy)))]
                           (om/update! model :current-taxon taxon)
                           (om/update! model :current-name (display-name (species-for-order taxon (:taxonomy @model))))
                           (om/update! model :time-period time)
