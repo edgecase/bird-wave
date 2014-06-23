@@ -26,19 +26,15 @@
 (defn try-with-default [m k default]
   (if (seq m) (k m) default))
 
-(def default-taxon "2881")
-
 (def model (atom {:current-taxon nil
                   :current-name ""
                   :time-period nil
-                  ;; hard code the default taxon :(
-                  :taxonomy [{:taxon/order "2881"
-                              :taxon/subspecies-scientific-name ""
-                              :taxon/scientific-name "Haliaeetus leucocephalus"
-                              :taxon/subspecies-common-name ""
-                              :taxon/common-name "Bald Eagle"}]
+                  :taxonomy []
                   :frequencies {}
                   :photo {}}))
+
+(defn lowercase [s]
+  (if s (.toLowerCase s) ""))
 
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period]} @model
@@ -51,7 +47,7 @@
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model
-        url (search-query (.toLowerCase current-name) 1)]
+        url (search-query (lowercase current-name) 1)]
     (js/d3.json url (fn [data]
                       (om/update! model :photo (first-photo data))))))
 
@@ -137,9 +133,9 @@
                   (om/update! model :taxonomy (vec taxonomy))))))
 
 (defn filter-taxonomy [taxonomy filter-text]
-  (let [filter-re (re-pattern (str ".*" (.toLowerCase filter-text) ".*"))]
+  (let [filter-re (re-pattern (str ".*" (lowercase filter-text) ".*"))]
     (vec (filter (fn [taxon]
-                   (let [species-name (.toLowerCase (str (:taxon/subspecies-common-name taxon)
+                   (let [species-name (lowercase (str (:taxon/subspecies-common-name taxon)
                                                          (:taxon/common-name taxon)))]
                      (re-find filter-re species-name)))
                  taxonomy))))
@@ -322,12 +318,9 @@
                           (let [use-defaults? (not (and current-taxon time-period))
                                 taxonomy (<! (await-taxonomy model))
                                 time (or time-period (first dates))
-                                taxon (cond
-                                       current-taxon current-taxon
-                                       (empty? taxonomy) default-taxon
-                                       :else (:taxon/order (rand-nth taxonomy)))]
+                                taxon (or current-taxon (:taxon/order (rand-nth taxonomy)))]
                             (om/update! model :current-taxon taxon)
-                            (om/update! model :current-name (display-name (species-for-order taxon (:taxonomy @model))))
+                            (om/update! model :current-name (display-name (species-for-order taxon taxonomy)))
                             (om/update! model :time-period time)
                             (update-map! model)
                             (update-photo! model)
