@@ -27,7 +27,6 @@
                   :frequencies {}
                   :photo {}}))
 
-
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period]} @model
         url (str "species/" current-taxon "/" time-period)]
@@ -39,7 +38,8 @@
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model
-        url (search-query (lowercase current-name) 1)]
+        query-str (apply str (interpose " " (re-seq #"\w{2,}" current-name)))
+        url (search-query (lowercase query-str) 1)]
     (js/d3.json url (fn [data]
                       (om/update! model :photo (first-photo data))))))
 
