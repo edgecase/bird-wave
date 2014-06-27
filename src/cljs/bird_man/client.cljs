@@ -84,13 +84,15 @@
                 (let [taxonomy (map keywordize-keys (js->clj species))]
                   (om/update! model :taxonomy (vec taxonomy))))))
 
-(defn filter-taxonomy [taxonomy filter-text]
+(defn filter-taxonomy
+  "Return a seq of species which partially match the filter-text"
+  [taxonomy filter-text]
   (let [filter-re (re-pattern (str ".*" (lowercase filter-text) ".*"))]
-    (vec (filter (fn [taxon]
-                   (let [species-name (lowercase (str (:taxon/subspecies-common-name taxon)
-                                                         (:taxon/common-name taxon)))]
-                     (re-find filter-re species-name)))
-                 taxonomy))))
+    (filter (fn [taxon]
+              (let [species-name (lowercase (str (:taxon/subspecies-common-name taxon)
+                                                 (:taxon/common-name taxon)))]
+                (re-find filter-re species-name)))
+            taxonomy)))
 
 (defn species-for-order
   "Return first taxon which matches based on order"
@@ -251,17 +253,16 @@
             internal-select-ch (om/get-state owner :internal-select-ch)]
         (go-loop []
           (let [[event value] (<! input-ch)
-                highlighted-index (om/get-state owner :highlighted-index)]
+                highlighted-index (om/get-state owner :highlighted-index)
+                filtered-list (filter-taxonomy @model (om/get-state owner :filter-value))]
             (case event
-              :up (if (>= highlighted-index 0)
+              :up (when (> highlighted-index 0)
                     (om/update-state! owner #(assoc % :highlighted-index (dec highlighted-index))))
-              :down (om/update-state! owner #(assoc % :highlighted-index (inc highlighted-index)))
+              :down (when (< (inc highlighted-index) (count filtered-list))
+                      (om/update-state! owner #(assoc % :highlighted-index (inc highlighted-index))))
               :value (om/update-state! owner #(assoc % :filter-value value, :highlighted-index -1))
-              :select (let [filtered-list (filter-taxonomy @model (om/get-state owner :filter-value))
-                            highlighted (try (nth filtered-list highlighted-index)
-                                             (catch js/Error e))]
-                        (if highlighted
-                          (put! internal-select-ch highlighted)))
+              :select (if-let [highlighted (try (nth filtered-list highlighted-index) (catch js/Error e))]
+                        (put! internal-select-ch highlighted))
               nil))
           (recur))
         (go-loop []
@@ -276,7 +277,7 @@
     om/IRenderState
     (render-state [_ {:keys [input-ch highlighted-index filter-value
                              selected internal-select-ch]}]
-      (let [filtered-list (filter-taxonomy model filter-value)
+      (let [filtered-list (vec (filter-taxonomy model filter-value))
             highlighted (try (nth filtered-list highlighted-index) (catch js/Error e))]
         (dom/div #js {:id "species"}
                  (om/build input-view model {:init-state {:input-ch input-ch}})
