@@ -14,17 +14,11 @@
             [bird-man.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-counties make-frequencies)]
-            [bird-man.flickr :refer (search-query info-query first-photo attribution)])
+            [bird-man.flickr :refer (search-query info-query first-photo attribution)]
+            [bird-man.util :refer (log try-with-default lowercase index-of)])
 
   (:import goog.History
            goog.history.EventType))
-
-(defn log [& args]
-  (if js/window.__birdman_debug__
-    (.log js/console (pr-str args))))
-
-(defn try-with-default [m k default]
-  (if (seq m) (k m) default))
 
 (def model (atom {:current-taxon nil
                   :current-name ""
@@ -33,8 +27,6 @@
                   :frequencies {}
                   :photo {}}))
 
-(defn lowercase [s]
-  (if s (.toLowerCase s) ""))
 
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period]} @model
@@ -86,6 +78,43 @@
     (js/d3.json url (fn [data]
                       (om/update! model :attribution (attribution data))))))
 
+(defn get-birds [model]
+  (js/d3.json "species"
+              (fn [species]
+                (let [taxonomy (map keywordize-keys (js->clj species))]
+                  (om/update! model :taxonomy (vec taxonomy))))))
+
+(defn filter-taxonomy [taxonomy filter-text]
+  (let [filter-re (re-pattern (str ".*" (lowercase filter-text) ".*"))]
+    (vec (filter (fn [taxon]
+                   (let [species-name (lowercase (str (:taxon/subspecies-common-name taxon)
+                                                         (:taxon/common-name taxon)))]
+                     (re-find filter-re species-name)))
+                 taxonomy))))
+
+(defn species-for-order
+  "Return first taxon which matches based on order"
+  [order taxonomy]
+  (first (filter (fn [taxon]
+                   (= order (:taxon/order taxon))) taxonomy)))
+
+(defn display-name
+  "Return the most descriptive name we have for the species"
+  [species]
+  (->> [(:taxon/subspecies-common-name species) (:taxon/common-name species)]
+       (filter not-empty)
+       (first)))
+
+(defn await-taxonomy
+  "Return a channel which will receive the value of :taxonomy after it has a non-empty value"
+  [model]
+  (go-loop []
+    (let [taxonomy (:taxonomy @model)]
+      (if (not-empty taxonomy)
+        taxonomy
+        (do (<! (timeout 10))
+            (recur))))))
+
 (deftemplate selection-image "templates/selection-image.html" [model owner]
   {[:#selection-image] (set-class (if (seq model) "loaded" "no-photo"))
    [:.photo] (set-attr :src (try-with-default model :url_q "/images/loading.png"))
@@ -120,49 +149,32 @@
                :value val
                :onChange (fn [e] (put! (om/get-state owner :time-period-ch)
                                        (get dates (js/parseInt (.. e -target -value)))))}))
-          (dom/svg nil
+          (dom/svg #js {:width "100%"}
             (dom/g #js {:className "axis"})))))
     om/IDidMount
     (did-mount [_]
       (init-axis ".axis"))))
 
-(defn get-birds [model]
-  (js/d3.json "species"
-              (fn [species]
-                (let [taxonomy (map keywordize-keys (js->clj species))]
-                  (om/update! model :taxonomy (vec taxonomy))))))
 
-(defn filter-taxonomy [taxonomy filter-text]
-  (let [filter-re (re-pattern (str ".*" (lowercase filter-text) ".*"))]
-    (vec (filter (fn [taxon]
-                   (let [species-name (lowercase (str (:taxon/subspecies-common-name taxon)
-                                                         (:taxon/common-name taxon)))]
-                     (re-find filter-re species-name)))
-                 taxonomy))))
-
-(defn species-for-order [order taxonomy]
-  (first (filter (fn [taxon]
-                   (= order (:taxon/order taxon))) taxonomy)))
-
-(defn map-component [model owner]
+(defn map-component
+  "Render container for map which will be controlled by D3.
+   We override should-update to ensure it is only ever rendered the first time"
+  [model owner]
   (reify
-    om/IShouldUpdate ;; This component is controlled from D3. We don't ever want to update it.
+    om/IShouldUpdate
     (should-update [_ next-props next-state] false)
+
     om/IRender
     (render [_]
       (dom/div #js {:id "map"}
         (dom/svg #js {:height (:height svg-dim)
                       :width (:width svg-dim)})))
+
     om/IDidMount
     (did-mount [_]
       (init-map "#map svg" model)
       (get-birds model))))
 
-(defn display-name [species]
-  (first (filter not-empty [(:taxon/subspecies-common-name species) (:taxon/common-name species)])))
-
-
-;;;;;;;;;;;;;;;;
 
 (defn species-item [model owner]
   (reify
@@ -251,8 +263,11 @@
               nil))
           (recur))
         (go-loop []
-          (let [selection (<! internal-select-ch)]
+          (let [selection (<! internal-select-ch)
+                filtered-list (filter-taxonomy @model (om/get-state owner :filter-value))
+                highlighted-index (index-of selection filtered-list -1)]
             (om/set-state! owner :selected selection)
+            (om/set-state! owner :highlighted-index highlighted-index)
             (put! select-ch selection))
           (recur))))
 
@@ -269,18 +284,6 @@
                                                        :select-ch internal-select-ch}})
                  (dom/div #js {:className "more"}
                           (dom/i #js {:className "icon-chevron-down"})))))))
-
-(defn await-taxonomy
-  "Return a channel which will receive the value of :taxonomy after it has a non-empty value"
-  [model]
-  (go-loop []
-    (let [taxonomy (:taxonomy @model)]
-      (if (not-empty taxonomy)
-        taxonomy
-        (do (<! (timeout 10))
-            (recur))))))
-
-;;;;;;;;;;
 
 (defn app [model owner]
   (reify
@@ -323,6 +326,7 @@
                             (om/update! model :current-name (display-name (species-for-order taxon taxonomy)))
                             (om/update! model :time-period time)
                             (update-map! model)
+
                             (update-photo! model)
                             (when use-defaults?
                               (push-state model history))))))
