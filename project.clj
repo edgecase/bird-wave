@@ -29,7 +29,11 @@
         :source-map "resources/public/javascript/build/client-dev.js.map"
         :optimizations :whitespace
         :pretty-print true
-        :preamble ["react/react.js"]
+        :preamble ["react/react.js"
+                   "vendor/scroll_into_view_polyfill.js"
+                   "vendor/d3.v3.js"
+                   "vendor/topojson.js"
+                   "vendor/colorbrewer.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
@@ -42,7 +46,11 @@
         :source-map "resources/public/javascript/advanced/client.js.map"
         :optimizations :advanced
         :pretty-print false
-        :preamble ["react/react.min.js"]
+        :preamble ["react/react.min.js"
+                   "vendor/scroll_into_view_polyfill.js"
+                   "vendor/d3.v3.js"
+                   "vendor/topojson.js"
+                   "vendor/colorbrewer.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
@@ -53,7 +61,11 @@
        {:output-to "resources/public/javascript/client.js"
         :optimizations :advanced
         :pretty-print false
-        :preamble ["react/react.min.js"]
+        :preamble ["react/react.min.js"
+                   "vendor/scroll_into_view_polyfill.js"
+                   "vendor/d3.v3.js"
+                   "vendor/topojson.js"
+                   "vendor/colorbrewer.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
