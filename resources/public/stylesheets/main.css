@@ -265,10 +265,16 @@ h2.selection-name {
   text-decoration: none;
 }
 
+
+
 #species .taxon:hover a,
-#species .taxon.active a,
 #species .taxon.highlighted a {
   background: #eee;
+  color: #222;
+}
+
+#species .taxon.active a {
+  background: #c7e9b4;
   color: #222;
 }
 
