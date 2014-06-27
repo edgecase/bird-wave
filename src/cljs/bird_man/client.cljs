@@ -235,7 +235,7 @@
     (did-mount [_]
       (.focus (om/get-node owner)))))
 
-(defn autocomplete [model owner {:keys [select-ch control-ch filter-fn]}]
+(defn filterlist [model owner {:keys [select-ch control-ch filter-fn]}]
   (reify
     om/IInitState
     (init-state [_]
@@ -337,7 +337,7 @@
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build autocomplete (:taxonomy model)
+        (om/build filterlist (:taxonomy model)
                   {:opts {:select-ch species-ch}})
         (om/build selection-name model)
         (om/build selection-image (:photo model))
