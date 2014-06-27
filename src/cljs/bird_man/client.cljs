@@ -189,9 +189,11 @@
 
     om/IDidUpdate
     (did-update [_ prev-props prev-state]
-      (if (and (= model (om/get-state owner :highlighted))
+      (when (and (= model (om/get-state owner :highlighted))
                (not= model (:highlighted prev-state)))
-        (.scrollIntoViewIfNeeded (om/get-node owner))))))
+        (try
+          (.scrollIntoViewIfNeeded (om/get-node owner))
+          (catch js/Error e))))))
 
 (defn species-list [model owner]
   (reify
