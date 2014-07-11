@@ -1,4 +1,4 @@
-(defproject bird-man "0.1.0-SNAPSHOT"
+(defproject bird-wave "0.1.0-SNAPSHOT"
   :description "Watch bird migrations"
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
@@ -76,7 +76,7 @@
 
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
-  :aliases {"run-dev" ["trampoline" "run" "-m" "bird-man.server/run-dev"]}
+  :aliases {"run-dev" ["trampoline" "run" "-m" "bird-wave.server/run-dev"]}
   :profiles {:dev {:dependencies [[io.pedestal/pedestal.jetty "0.2.2"]
                                   [datomic-schema-grapher "0.0.1"]
                                   [ankha "0.1.1"]
@@ -85,5 +85,5 @@
 
 
 
-  :pedestal {:server-ns "bird-man.server"
+  :pedestal {:server-ns "bird-wave.server"
              :url-pattern "/*"})

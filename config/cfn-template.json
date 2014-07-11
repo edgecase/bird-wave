@@ -1,5 +1,5 @@
 {
-  "Description": "Birdman Application",
+  "Description": "BirdWave Application",
   "Parameters": {
     "Stage" : {
       "Description" : "The 'Stage', or environment, in which this stack will run.",

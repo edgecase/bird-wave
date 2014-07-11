@@ -1,8 +1,8 @@
-(ns bird-man.service-test
+(ns bird-wave.service-test
   (:require [clojure.test :refer :all]
             [io.pedestal.service.test :refer :all]
             [io.pedestal.service.http :as bootstrap]
-            [bird-man.service :as service]))
+            [bird-wave.service :as service]))
 
 (def service
   (::bootstrap/service-fn (bootstrap/create-servlet service/service)))

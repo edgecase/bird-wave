@@ -1,4 +1,4 @@
-(ns bird-man.client
+(ns bird-wave.client
   (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)]
                    [kioo.om :refer [defsnippet deftemplate]])
   (:require [clojure.string :as cs]
@@ -11,11 +11,11 @@
             [goog.events :as events]
             [ankha.core :as ankha]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
-            [bird-man.map :refer (init-axis color active-state zoom zoom-duration
+            [bird-wave.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-counties make-frequencies)]
-            [bird-man.flickr :refer (search-query info-query first-photo attribution)]
-            [bird-man.util :refer (log try-with-default lowercase index-of analytic-event)])
+            [bird-wave.flickr :refer (search-query info-query first-photo attribution)]
+            [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event)])
 
   (:import goog.History
            goog.history.EventType))

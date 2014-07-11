@@ -1,6 +1,6 @@
-(ns bird-man.map
+(ns bird-wave.map
   (:require [clojure.string :as cs]
-            [bird-man.util :refer (analytic-event)]))
+            [bird-wave.util :refer (analytic-event)]))
 
 (def svg-dim {:width 800 :height 500})
 (def key-dim {:width 10 :height 200})

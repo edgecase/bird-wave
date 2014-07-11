@@ -1,4 +1,4 @@
-(ns bird-man.service
+(ns bird-wave.service
     (:require [io.pedestal.service.http :as bootstrap]
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
@@ -98,7 +98,7 @@
 
     ["/health-check" {:get am-i-alive}]]])
 
-;; Consumed by bird-man.server/create-server
+;; Consumed by bird-wave.server/create-server
 (def service
   {
    ::bootstrap/interceptors
