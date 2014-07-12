@@ -16,11 +16,11 @@ Our use case was simple: A user would click on the name of a bird species. We
 would search the Flickr API with that name, grab the first result, place the
 image url in an `<img>` tag on our page and display the attribution alongside.
 We didn't need a heavy-weight third-party library to accomplish this (though
-there are some very exhaustive ones out there in several popular programming
-languages). All we needed was to be able to construct the correct query urls.
-This became easy to do with [Chas Emerick's](https://twitter.com/cemerick)
-[url](https://github.com/cemerick/url) library, which allows us to manipulate
-query strings as maps.
+[there are many](https://github.com/search?q=flickr&ref=simplesearch) out there
+in several popular programming languages). All we needed was to be able to
+construct two correct query urls.  This became easy to do with [Chas
+Emerick's](https://twitter.com/cemerick) [url](https://github.com/cemerick/url)
+library, which allows us to manipulate query strings as maps.
 
 ## Searching Photos (flickr.photos.search)
 
@@ -68,56 +68,113 @@ shown below (text: "eastern kingbird", per\_page: 1):
         ] }, "stat": "ok" }
 ```
 
-The JSON is pretty straightforward, but if you notice, there's no attribution
-in the search result. To retrieve that, we need to make another call, detailed
-in the next section.
+The JSON is pretty straightforward for retrieving the url and title, but if
+you notice, there's no attribution information in the search result. To
+obtain that, we need to make another call, detailed in the next section.
 
 ## Retrieving Attribution (flickr.photos.getInfo)
 
-One of the values returned in the search result is the photo id and secret. We
+Among the values returned in the search result are the photo id and secret. We
 can ask Flickr to give us more information about the photo using these values.
 The getInfo API is documented
 [here](https://www.flickr.com/services/api/flickr.photos.getInfo.html), and the
 explorer tool is
 [here](https://www.flickr.com/services/api/explore/flickr.photos.getInfo).
 
-Since there are no other params required, we can build another ClojureScript
-function that builds the map we need:
+Since there are no other params required, we can write another ClojureScript
+function that builds the query map we need:
 
 ```clojure
-    (defn info-params [photo-id, secret]
-      "Params for fetching details of photo with photo-id and optional secret"
-      {:method "flickr.photos.getInfo"
-       :photo_id photo-id
-       :secret secret})
+(defn info-params [photo-id, secret]
+  "Params for fetching details of photo with photo-id and optional secret"
+  {:method "flickr.photos.getInfo"
+   :photo_id photo-id
+   :secret secret})
 ```
 
 The JSON response looks like the one below:
 
 ```json
-    { "photo": { "id": "4769690133", "secret": "818406d0cd", "server": "4123", "farm": 5, "dateuploaded": "1278473496", "isfavorite": 0, "license": 4, "safety_level": 0, "rotation": 0, "originalsecret": "d7072dbb9a", "originalformat": "jpg",
-        "owner": { "nsid": "31064702@N05", "username": "Dawn Huczek", "realname": "", "location": "USA", "iconserver": "2915", "iconfarm": 3, "path_alias": "" },
-        "title": { "_content": "Eastern Kingbird" },
-        "description": { "_content": "I think this is an Eastern Kingbird.\nFor Feathery Friday&quot;\nI am not BATMAN!! (with my cape and black mask)" },
-        "visibility": { "ispublic": 1, "isfriend": 0, "isfamily": 0 },
-        "dates": { "posted": "1278473496", "taken": "2010-07-03 17:35:11", "takengranularity": 0, "lastupdate": "1397608686" }, "views": "392",
-        "editability": { "cancomment": 0, "canaddmeta": 0 },
-        "publiceditability": { "cancomment": 1, "canaddmeta": 0 },
-        "usage": { "candownload": 1, "canblog": 0, "canprint": 0, "canshare": 1 },
-        "comments": { "_content": 40 },
-        "notes": {
-          "note": [
-          ] },
-        "people": { "haspeople": 0 },
-        "tags": {
-          "tag": [
-            { "id": "31059362-4769690133-711781", "author": "31064702@N05", "authorname": "Dawn Huczek", "raw": "Kensington Metropark", "_content": "kensingtonmetropark", "machine_tag": 0 },
-            { "id": "31059362-4769690133-587205", "author": "31064702@N05", "authorname": "Dawn Huczek", "raw": "Eastern Kingbird", "_content": "easternkingbird", "machine_tag": 0 },
-            { "id": "31059362-4769690133-8822142", "author": "46484868@N00", "authorname": "Tall Bob", "raw": "AvianExcellence", "_content": "avianexcellence", "machine_tag": 0 },
-            { "id": "31059362-4769690133-1874633", "author": "31064702@N05", "authorname": "Dawn Huczek", "raw": "featheryfriday", "_content": "featheryfriday", "machine_tag": 0 }
-          ] },
-        "urls": {
-          "url": [
-            { "type": "photopage", "_content": "https:\/\/www.flickr.com\/photos\/31064702@N05\/4769690133\/" }
-          ] }, "media": "photo" }, "stat": "ok" }
+{ "photo": { "id": "4769690133", "secret": "818406d0cd", "server": "4123", "farm": 5, "dateuploaded": "1278473496", "isfavorite": 0, "license": 4, "safety_level": 0, "rotation": 0, "originalsecret": "d7072dbb9a", "originalformat": "jpg",
+    "owner": { "nsid": "31064702@N05", "username": "Dawn Huczek", "realname": "", "location": "USA", "iconserver": "2915", "iconfarm": 3, "path_alias": "" },
+    ...
+    "urls": {
+      "url": [
+        { "type": "photopage", "_content": "https:\/\/www.flickr.com\/photos\/31064702@N05\/4769690133\/" }
+      ] }, "media": "photo" }, "stat": "ok" }
 ```
+
+The attribution license requires that the image be linked to its Flickr photo
+page, which is included in the urls section of the response. The owner details
+and title information are the other pieces of information we look for. All
+together, the following snippet can extract what we need:
+
+```clojure
+(defn attribution [photo-info]
+  (let [detail  (-> photo-info
+                    (js->clj)
+                    (keywordize-keys)
+                    (:photo))]
+    {:by (first (filter not-empty (vec (vals (select-keys (:owner detail) [:realname :username :path_alias])))))
+     :url (get-in detail [:urls :url 0 :_content])}))
+```
+
+First we parse the JSON into a Clojure map using the `js->clj` macro, followed
+by changing the string keys to keywords with `clojure.walk/keywordize-keys`.
+The name to display can be the first non-empty value for the owner's
+`realname`, `username` or `pathalias` properties. The photo page url is the
+`_content` property of the first url in the returned set. We return a map of
+the two values for use in the application.
+
+## Building the URL
+
+This is the easy part. With the `cemerick.url/url` function, we can build an
+instance of a URL object from a string, like so:
+
+```clojure
+(def api-base-url (url "https://api.flickr.com/services/rest/"))
+```
+
+Then, we can assign it a query string by calling `assoc`:
+
+```clojure
+(assoc api-base-url :query {:api_key "my_super_flickr_key"})
+```
+
+Calling `str` on a URL instance returns its string representation which we can
+use to make AJAX calls. So we can write this function to create a URL with
+static and dynamic segments:
+
+```clojure
+(def api-key-params {:api_key "my_super_flickr_key"})
+(def format-params {:format "json" :nojsoncallback 1})
+
+(defn build-url [func & args]
+  (let [query (into {} [api-key-params
+                        format-params
+                        (apply func args)])]
+    (-> api-base-url
+        (assoc :query query)
+        str)))
+```
+
+The format params ensure that the response is JSON. Omitting the
+`nojsoncallback` param would return JSONP. The `build-url` function is a higher
+order function that allows us to pass in a function name and its arguments,
+the results of which are tacked into the query map along with the static api
+format maps. We can use this function with our `search-params` and `info-params`
+functions above to generate the urls we need:
+
+```clojure
+(make-request search-params "eastern kingbird" 1) ;; https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=my_super_flickr_key&text=eastern+kingbird&license=4&sort=relevance&extras=owner_name%2C+url_q&per_page=1&format=json&nojsoncallback=1
+(make-request info-params "4769690133" "818406d0cd") ;; https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=my_super_flickr_key&photo_id=4769690133&secret=818406d0cd&format=json&nojsoncallback=1
+```
+
+Writing this little helper library took about an hour once we found the url
+library. Managing this with plain strings would have been way more painful.
+
+## Conclusion
+
+With this, we have the ability to search photos and attributions on Flickr.
+Stay tuned to see how we integrate this into our migration mapping app using
+Om, ClojureScript's implementation of Facebook's ReactJS.
