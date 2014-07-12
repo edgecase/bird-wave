@@ -158,16 +158,16 @@ static and dynamic segments:
         str)))
 ```
 
-The format params ensure that the response is JSON. Omitting the
-`nojsoncallback` param would return JSONP. The `build-url` function is a higher
-order function that allows us to pass in a function name and its arguments,
-the results of which are tacked into the query map along with the static api
-format maps. We can use this function with our `search-params` and `info-params`
-functions above to generate the urls we need:
+The `build-url` function is a higher order function that allows us to pass in a
+function name and its arguments, the results of which are tacked into the query
+map along with the static api and format maps. (The format params ensure that
+the response is JSON. Omitting the `nojsoncallback` param would return JSONP.)
+We can use `build-url` with our `search-params` and `info-params` functions
+above to generate the urls we need:
 
 ```clojure
-(make-request search-params "eastern kingbird" 1) ;; https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=my_super_flickr_key&text=eastern+kingbird&license=4&sort=relevance&extras=owner_name%2C+url_q&per_page=1&format=json&nojsoncallback=1
-(make-request info-params "4769690133" "818406d0cd") ;; https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=my_super_flickr_key&photo_id=4769690133&secret=818406d0cd&format=json&nojsoncallback=1
+(build-url search-params "eastern kingbird" 1) ;; https://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=my_super_flickr_key&text=eastern+kingbird&license=4&sort=relevance&extras=owner_name%2C+url_q&per_page=1&format=json&nojsoncallback=1
+(build-url info-params "4769690133" "818406d0cd") ;; https://api.flickr.com/services/rest/?method=flickr.photos.getInfo&api_key=my_super_flickr_key&photo_id=4769690133&secret=818406d0cd&format=json&nojsoncallback=1
 ```
 
 Writing this little helper library took about an hour once we found the url
