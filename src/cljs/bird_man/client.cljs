@@ -75,6 +75,7 @@
         secret (:secret @model)
         url (info-query photo-id secret)]
     (.preventDefault e)
+    (analytic-event {:category "attribution" :action "request-attribution" :label photo-id})
     (js/d3.json url (fn [data]
                       (om/update! model :attribution (attribution data))))))
 
