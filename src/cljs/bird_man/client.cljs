@@ -15,7 +15,7 @@
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-counties make-frequencies)]
             [bird-man.flickr :refer (search-query info-query first-photo attribution)]
-            [bird-man.util :refer (log try-with-default lowercase index-of)])
+            [bird-man.util :refer (log try-with-default lowercase index-of analytic-event)])
 
   (:import goog.History
            goog.history.EventType))
