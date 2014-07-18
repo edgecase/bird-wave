@@ -311,15 +311,16 @@
             time-period-ch ([new-time-period]
                             (om/update! model :time-period new-time-period)
                             (push-state model history)
-                            (update-map! model))
+                            (update-map! model)
+                            (analytic-event {:category "time-period" :action "month-change" :label new-time-period}))
             species-ch ([result]
                         (om/update! model :current-taxon (:taxon/order result))
                         (om/update! model :current-name (display-name result))
                         (push-state model history)
                         (update-map! model)
-                        (update-photo! model))
+                        (update-photo! model)
+                        (analytic-event {:category "species" :action "species-change" :label (display-name result)}))
             history-ch ([{:keys [current-taxon time-period]}]
-                        (log :history-ch)
                         (go
                           (let [use-defaults? (not (and current-taxon time-period))
                                 taxonomy (<! (await-taxonomy model))
@@ -328,8 +329,8 @@
                             (om/update! model :current-taxon taxon)
                             (om/update! model :current-name (display-name (species-for-order taxon taxonomy)))
                             (om/update! model :time-period time)
-                            (update-map! model)
 
+                            (update-map! model)
                             (update-photo! model)
                             (when use-defaults?
                               (push-state model history))))))
@@ -351,9 +352,10 @@
                     (.node)
                     (.-parentNode))
         selection (.select js/d3 section)
-        open (not (-> selection (.classed "closed")))]
+        is-open (not (-> selection (.classed "closed")))]
     (-> selection
-        (.classed "closed" open))))
+        (.classed "closed" is-open))
+    (analytic-event {:category "how-this-works" :action "click" :label (if is-open "close" "open")})))
 
 (defn ^:export start []
   (om/root app model {:target (.getElementById js/document "main")})

@@ -1,5 +1,6 @@
 (ns bird-man.map
-  (:require [clojure.string :as cs]))
+  (:require [clojure.string :as cs]
+            [bird-man.util :refer (analytic-event)]))
 
 (def svg-dim {:width 800 :height 500})
 (def key-dim {:width 10 :height 200})
@@ -52,6 +53,9 @@
         translate (array (- (/ width 2) (* scale x)) (- (/ height 2) (* scale y)))]
     {:scale scale :translate translate}))
 
+(defn state-name [el]
+  (aget el "properties" "state"))
+
 (defn init-axis [selector]
   (-> js/d3
       (.select selector)
@@ -80,7 +84,8 @@
             (.duration zoom-duration)
             (.call (.-event (-> zoom
                                 (.translate (:translate zoom-attrs))
-                                (.scale (:scale zoom-attrs))))))))))
+                                (.scale (:scale zoom-attrs))))))
+        (analytic-event {:category "zoom" :action "click-state" :label (state-name state)})))))
 
 (defn prevent-zoom-on-drag []
   (let [e (.-event js/d3)]
