@@ -1,4 +1,4 @@
-# bird-man
+# bird-wave
 
 
 ## Getting Started
@@ -28,6 +28,6 @@ a backup.
 
 ```bash
 $ lein do cljsbuild clean, cljsbuild once prod, pedestal uberwar
-$ ./scripts/update-stack.sh $PWD/target/bird-man-0.1.0-SNAPSHOT-standalone.war birdman-production
+$ ./scripts/update-stack.sh $PWD/target/bird-wave-0.1.0-SNAPSHOT-standalone.war birdwave-production
 ```
 

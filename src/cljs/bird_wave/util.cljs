@@ -1,7 +1,7 @@
-(ns bird-man.util)
+(ns bird-wave.util)
 
 (defn log [& args]
-  (if js/window.__birdman_debug__
+  (if js/window.__birdwave_debug__
     (.log js/console (pr-str args))))
 
 (defn try-with-default [m k default]

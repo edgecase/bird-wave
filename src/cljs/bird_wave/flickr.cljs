@@ -1,4 +1,4 @@
-(ns bird-man.flickr
+(ns bird-wave.flickr
   (:require [cemerick.url :refer (url url-encode)]
             [clojure.walk :refer (keywordize-keys)]))
 
