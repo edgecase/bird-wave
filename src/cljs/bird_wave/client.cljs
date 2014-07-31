@@ -22,6 +22,7 @@
                   :taxonomy []
                   :frequencies {}
                   :photo {}
+                  :loading #{}
                   :screen-size "lg"}))
 
 (defn watch-screen-size [model]
@@ -38,6 +39,7 @@
         by (if lg-screen "county" "state")
         url (str "species/" current-taxon "/" time-period "?by=" by)]
     (when (and current-taxon time-period)
+      (om/transact! model :loading #(conj % url))
       (get-clj url (fn [data]
                      (om/update! model :frequencies
                                  (make-frequencies by data))
@@ -330,6 +332,12 @@
                  (dom/div #js {:className "more"}
                           (dom/i #js {:className "icon-chevron-down"})))))))
 
+(defn loading-indicator [model owner]
+  (om/component
+   (dom/p #js {}
+          (when-not (empty? model)
+            "LOADING"))))
+
 (defn app [model owner]
   (reify
     om/IInitState
@@ -382,6 +390,7 @@
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
         (om/build selection-name model)
+        (om/build loading-indicator (:loading model))
         (if (contains? #{"lg" "md"} (:screen-size model))
           (om/build date-slider model {:state {:time-period-ch time-period-ch}})
           (om/build date-select model {:state {:time-period-ch time-period-ch}}))
