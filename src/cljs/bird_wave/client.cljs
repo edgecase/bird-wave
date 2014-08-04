@@ -340,12 +340,12 @@
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build filterlist (:taxonomy model)
-                  {:opts {:select-ch species-ch}})
         (om/build selection-name model)
-        (om/build selection-image (:photo model))
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})
-        (om/build map-component model)))))
+        (om/build map-component model)
+        (om/build selection-image (:photo model))
+        (om/build filterlist (:taxonomy model)
+                  {:opts {:select-ch species-ch}})))))
 
 (defn open-section []
   (let [section (-> js/d3
