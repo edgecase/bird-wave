@@ -16,7 +16,6 @@
 (def months ( -> (js/d3.time.scale)
                  (.domain (array (new js/Date 2012 10 15) (new js/Date 2013 10 15)))
                  (.range (array 0 (- (:width svg-dim) 10)))))
-(def month-axis )
 (def key-scale ( -> js/d3.scale
                     (.linear)
                     (.domain (array max-freq 0))
