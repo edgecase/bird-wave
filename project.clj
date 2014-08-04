@@ -33,12 +33,14 @@
                    "vendor/scroll_into_view_polyfill.js"
                    "vendor/d3.v3.js"
                    "vendor/topojson.js"
-                   "vendor/colorbrewer.js"]
+                   "vendor/colorbrewer.js"
+                   "vendor/enquire.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
                   "externs/colorbrewer.js"
-                  "externs/ga.js"]}}
+                  "externs/ga.js"
+                  "externs/enquire.js"]}}
       :advanced
       {:source-paths ["src/cljs"]
        :compiler
@@ -51,12 +53,14 @@
                    "vendor/scroll_into_view_polyfill.js"
                    "vendor/d3.v3.js"
                    "vendor/topojson.js"
-                   "vendor/colorbrewer.js"]
+                   "vendor/colorbrewer.js"
+                   "vendor/enquire.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
                   "externs/colorbrewer.js"
-                  "externs/ga.js"]}}
+                  "externs/ga.js"
+                  "externs/enquire.js"]}}
       :prod
       {:source-paths ["src/cljs"]
        :compiler
@@ -67,12 +71,14 @@
                    "vendor/scroll_into_view_polyfill.js"
                    "vendor/d3.v3.js"
                    "vendor/topojson.js"
-                   "vendor/colorbrewer.js"]
+                   "vendor/colorbrewer.js"
+                   "vendor/enquire.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
                   "externs/colorbrewer.js"
-                  "externs/ga.js"]}}}}
+                  "externs/ga.js"
+                  "externs/enquire.js"]}}}}
 
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
