@@ -25,7 +25,8 @@
                   :time-period nil
                   :taxonomy []
                   :frequencies {}
-                  :photo {}}))
+                  :photo {}
+                  :screen-size "lg"}))
 
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period]} @model
@@ -139,7 +140,6 @@
   (reify
     om/IRender
     (render [_]
-      (log :date-slider)
       (let [val (if-let [date (:time-period model)]
                   (.indexOf dates date)
                   0)]
@@ -347,6 +347,14 @@
         (om/build filterlist (:taxonomy model)
                   {:opts {:select-ch species-ch}})))))
 
+(defn watch-screen-size [model]
+  (.log js/console "registering")
+  (-> js/enquire
+      (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
+      (.register "screen and (min-width: 520px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
+      (.register "screen and (min-width: 768px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
+      (.register "screen and (min-width: 1024px)" #(swap! model assoc :screen-size "lg"))))
+
 (defn open-section []
   (let [section (-> js/d3
                     (.select (target))
@@ -359,6 +367,7 @@
     (analytic-event {:category "how-this-works" :action "click" :label (if is-open "close" "open")})))
 
 (defn ^:export start []
+  (watch-screen-size model)
   (om/root app model {:target (.getElementById js/document "main")})
   ( -> js/d3
        (.select "#how-this-works h2")
