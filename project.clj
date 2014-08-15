@@ -9,7 +9,7 @@
                  [com.datomic/datomic-pro "0.9.4815.12" :exclusions [org.slf4j/slf4j-nop]]
                  [enlive "1.1.5"]
                  [org.clojure/clojurescript "0.0-2202"]
-                 [org.clojure/core.async "0.1.301.0-deb34a-alpha"]
+                 [org.clojure/core.async "0.1.319.0-6b1aca-alpha"]
                  [om "0.7.0"]
                  [secretary "1.1.0"]
                  [com.cemerick/url "0.1.1"]
