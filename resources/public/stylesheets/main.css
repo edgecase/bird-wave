@@ -96,7 +96,7 @@ header {
   width: 100%;
   padding: 10px 10px 20px;
   background: rgba(0, 0, 0, 0.9);
-  min-width: 1025px;
+  min-width: 1024px;
   height: 60px;
   top: 0px;
 
@@ -199,7 +199,7 @@ h2.selection-name {
 
 #main {
   position: relative;
-  width: 1025px;
+  width: 1024px;
   height: 600px;
   margin: 70px auto;
 
@@ -567,7 +567,7 @@ h2.selection-name {
 
 #how-this-works p {
   opacity: 1;
-  width: 1025px;
+  width: 1024px;
   margin-left: auto;
   margin-right: auto;
   -webkit-transition: opacity 0.5s;
@@ -591,6 +591,21 @@ h2.selection-name {
   transition: opacity 0.5s;
 }
 
+.screen-size-notice {
+  display: none;
+  width: 90%;
+  margin: 10px auto;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #eee;
+  color: #333;
+}
+
+@media screen and (max-width: 1024px) {
+  .screen-size-notice {
+    display: block;
+  }
+}
 
 /* for debugging */
 #inspector {
