@@ -78,7 +78,30 @@
                 [?e :sighting/county ?county]]
               (db conn)
               taxon
-              year-month) ))))
+              year-month)))))
+
+(defn statewise-frequencies [{conn :datomic-conn :as request}]
+  (ring-resp/response
+    (let [{:keys [taxon year-month]} (:path-params request) ]
+      (map zipmap
+           (repeat [:state :total :sightings])
+           (q '[:find ?state (sum ?count) (count ?e)
+                :in $ ?taxon ?ym
+                :where
+                [?t :taxon/order ?taxon]
+                [?e :sighting/taxon ?t]
+                [?e :sighting/month-yr ?ym]
+                [?e :sighting/state-code ?state]
+                [?e :sighting/count ?count]]
+              (db conn)
+              taxon
+              year-month)))))
+
+(defn requested-frequencies [request]
+  (let [{:keys [by]} (:query-params request)]
+    (case by
+      "state" (statewise-frequencies request)
+      "county" (countywise-frequencies request))))
 
 (defn am-i-alive [request]
   (ring-resp/response "OK"))
@@ -92,9 +115,9 @@
       ^:interceptors [bootstrap/json-body (cache-control 300)]
 
       ["/:taxon/:year-month"
-       ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}"}
+       ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}" :by #"state|county"}
        ^:interceptors [(cache-control 99000000)]
-       {:get countywise-frequencies}]]]
+       {:get requested-frequencies}]]]
 
     ["/health-check" {:get am-i-alive}]]])
 
