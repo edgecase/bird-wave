@@ -165,7 +165,10 @@
   [model owner]
   (reify
     om/IShouldUpdate
-    (should-update [_ next-props next-state] false)
+    (should-update [_ next-props next-state]
+      (.log js/console (:screen-size next-props))
+      (.log js/console (:screen-size (om/get-props owner)))
+      (not (= (:screen-size next-props) (:screen-size (om/get-props owner)))))
 
     om/IRender
     (render [_]
@@ -175,8 +178,13 @@
 
     om/IDidMount
     (did-mount [_]
-      (init-map "#map svg" model)
-      (get-birds model))))
+      (.log js/console "mounted; initing")
+      (init-map "#map svg" model))
+
+    om/IDidUpdate
+    (did-update [_ prev-props prev-state]
+      (.log js/console "updated; initing")
+      (init-map "#map svg" model))))
 
 
 (defn species-item [model owner]
@@ -345,15 +353,19 @@
         (om/build map-component model)
         (om/build selection-image (:photo model))
         (om/build filterlist (:taxonomy model)
-                  {:opts {:select-ch species-ch}})))))
+                  {:opts {:select-ch species-ch}})))
+
+    om/IDidMount
+    (did-mount [_]
+      (get-birds model))))
 
 (defn watch-screen-size [model]
   (.log js/console "registering")
   (-> js/enquire
       (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
-      (.register "screen and (min-width: 520px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
-      (.register "screen and (min-width: 768px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
-      (.register "screen and (min-width: 1024px)" #(swap! model assoc :screen-size "lg"))))
+      (.register "screen and (min-width: 521px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
+      (.register "screen and (min-width: 769px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
+      (.register "screen and (min-width: 1025px)" #(swap! model assoc :screen-size "lg"))))
 
 (defn open-section []
   (let [section (-> js/d3

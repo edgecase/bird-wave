@@ -219,7 +219,8 @@ h2.selection-name {
 
 @media screen and (max-width: 1024px) {
   #main {
-    width: 520px;
+    width: 768px;
+    height: 450px;
   }
 }
 
@@ -231,7 +232,7 @@ h2.selection-name {
 }
 
 #map {
-  width: 800px;
+  width: 768px;
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
   opacity: 0.9;
@@ -240,7 +241,12 @@ h2.selection-name {
 
 @media screen and (max-width: 1024px) {
   #map {
-    display: none;
+    width: 500px;
+    float: left;
+  }
+
+  #map svg {
+    transform: matrix(0.65,0,0,0.65,-130,-90);
   }
 }
 
@@ -250,14 +256,14 @@ h2.selection-name {
 
 #slider {
   height: 50px;
-  width: 790px;
+  width: 768px;
 }
 
 #slider svg .axis {
   z-index: -10;
 }
 
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 768px) {
   #slider {
     display: none;
   }
@@ -289,8 +295,9 @@ h2.selection-name {
 @media screen and (max-width: 1024px) {
   #species {
     position: relative;
+    margin-top: 20px;
     float: right;
-    width: 300px;
+    width: 250px;
   }
 }
 
@@ -334,7 +341,7 @@ h2.selection-name {
   overflow-y: scroll;
 }
 
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 768px) {
   #species ul {
     height: 480px;
   }
@@ -397,10 +404,7 @@ h2.selection-name {
 
 @media screen and (max-width: 1024px) {
   #selection-image {
-    position: relative;
-    top: initial;
-    float: left;
-    margin: 0px auto;
+    display: none;
   }
 }
 
