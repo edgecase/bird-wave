@@ -29,8 +29,10 @@
                   :screen-size "lg"}))
 
 (defn update-map! [model]
-  (let [{:keys [current-taxon time-period]} @model
-        url (str "species/" current-taxon "/" time-period)]
+  (let [{:keys [current-taxon time-period screen-size]} @model
+        lg-screen (= screen-size "lg")
+        by (if lg-screen "county" "state")
+        url (str "species/" current-taxon "/" time-period "?by=" by)]
     (when (and current-taxon time-period)
       (js/d3.json url (fn [data]
                         (om/update! model :frequencies
@@ -166,8 +168,6 @@
   (reify
     om/IShouldUpdate
     (should-update [_ next-props next-state]
-      (.log js/console (:screen-size next-props))
-      (.log js/console (:screen-size (om/get-props owner)))
       (not (= (:screen-size next-props) (:screen-size (om/get-props owner)))))
 
     om/IRender
@@ -178,12 +178,10 @@
 
     om/IDidMount
     (did-mount [_]
-      (.log js/console "mounted; initing")
       (init-map "#map svg" model))
 
     om/IDidUpdate
     (did-update [_ prev-props prev-state]
-      (.log js/console "updated; initing")
       (init-map "#map svg" model))))
 
 
@@ -360,7 +358,6 @@
       (get-birds model))))
 
 (defn watch-screen-size [model]
-  (.log js/console "registering")
   (-> js/enquire
       (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
       (.register "screen and (min-width: 521px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
