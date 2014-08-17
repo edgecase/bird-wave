@@ -30,6 +30,12 @@ svg .state {
   pointer-events: all;
 }
 
+@media screen and (max-width: 1024px) {
+  svg .state {
+    fill: #081d58;
+  }
+}
+
 svg .county {
   fill: #081d58;
   stroke: #081d58;
