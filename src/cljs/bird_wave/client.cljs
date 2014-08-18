@@ -13,7 +13,7 @@
             [cljs.core.async :as async :refer (chan put! <! timeout)]
             [bird-wave.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
-                                  prevent-zoom-on-drag init-map update-counties make-frequencies)]
+                                  prevent-zoom-on-drag init-map update-map make-frequencies)]
             [bird-wave.flickr :refer (search-query info-query first-photo attribution)]
             [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event)])
 
@@ -36,8 +36,8 @@
     (when (and current-taxon time-period)
       (js/d3.json url (fn [data]
                         (om/update! model :frequencies
-                                    (make-frequencies data))
-                        (update-counties (:frequencies @model)))))))
+                                    (make-frequencies by data))
+                        (update-map by (:frequencies @model)))))))
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model

@@ -179,12 +179,24 @@
 (defn build-key [state county]
   (apply str (interpose "-" [state county])))
 
-(defn make-frequencies [stats]
+(defn make-state-frequencies [stats]
+  (into {}
+        (map (fn [s]
+               [(aget s "state")
+                (/ (aget s "total") (aget s "sightings"))])
+             stats)))
+
+(defn make-county-frequencies [stats]
   (into {}
         (map (fn [s]
                [(build-key (aget s "state") (aget s "county"))
                 (/ (aget s "total") (aget s "sightings"))])
              stats)))
+
+(defn make-frequencies [method stats]
+  (case method
+    "state" (make-state-frequencies stats)
+    "county" (make-county-frequencies stats)))
 
 (defn freq-for-county [frequencies data]
   (let [p (aget data "properties")
@@ -194,18 +206,44 @@
         freq (get frequencies keystr)]
   (if freq freq 0.0)))
 
-(defn freq-duration [frequencies]
+(defn freq-for-state [frequencies data]
+  (let [p (aget data "properties")
+        st (str "US-" (aget p "state"))
+        freq (get frequencies st)]
+  (if freq freq 0.0)))
+
+(defn freq-duration-county [frequencies]
   (fn [data]
     (+ (* 100 (freq-for-county frequencies data)) 200)))
 
-(defn freq-color [frequencies]
+(defn freq-color-county [frequencies]
   (fn [data]
     (color (freq-for-county frequencies data))))
+
+(defn freq-duration-state [frequencies]
+  (fn [data]
+    (+ (* 100 (freq-for-state frequencies data)) 200)))
+
+(defn freq-color-state [frequencies]
+  (fn [data]
+    (color (freq-for-state frequencies data))))
 
 (defn update-counties [model]
   ( -> js/d3
        (.selectAll "path.county")
        (.transition)
-       (.duration (freq-duration model))
-       (.style "fill" (freq-color model))
-       (.style "stroke" (freq-color model))))
+       (.duration (freq-duration-county model))
+       (.style "fill" (freq-color-county model))
+       (.style "stroke" (freq-color-county model))))
+
+(defn update-states [model]
+  ( -> js/d3
+       (.selectAll "path.state")
+       (.transition)
+       (.duration (freq-duration-state model))
+       (.style "fill" (freq-color-state model))))
+
+(defn update-map [method model]
+  (case method
+    "state" (update-states model)
+    "county" (update-counties model)))
