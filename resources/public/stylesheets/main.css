@@ -230,6 +230,13 @@ h2.selection-name {
   }
 }
 
+@media screen and (max-width: 768px) {
+  #main {
+    width: 520px;
+    height: 450px;
+  }
+}
+
 @media screen and (max-width: 520px) {
   #main {
     margin-top: 20px;
@@ -239,8 +246,6 @@ h2.selection-name {
 
 #map {
   width: 768px;
-  border-top-left-radius: 5px;
-  border-bottom-left-radius: 5px;
   opacity: 0.9;
   margin: 0;
 }
@@ -253,6 +258,26 @@ h2.selection-name {
 
   #map svg {
     transform: matrix(0.65,0,0,0.65,-130,-90);
+  }
+}
+
+@media screen and (max-width: 768px) {
+  #map {
+    width: 500px;
+    height: 350px;
+    float: none;
+    margin: auto;
+  }
+}
+
+@media screen and (max-width: 520px) {
+  #map {
+    width: 300px;
+    height: 280px;
+  }
+
+  #map svg {
+    transform: matrix(0.4,0,0,0.4,-240,-90);
   }
 }
 
@@ -307,9 +332,16 @@ h2.selection-name {
   }
 }
 
+@media screen and (max-width: 768px) {
+  #species {
+    width: 500px;
+    float: none;
+    margin: auto;
+  }
+}
+
 @media screen and (max-width: 520px) {
   #species {
-    float: none;
     width: 100%;
     margin-top: 20px;
   }
@@ -349,7 +381,7 @@ h2.selection-name {
 
 @media screen and (max-width: 768px) {
   #species ul {
-    height: 480px;
+    height: 190px;
   }
 }
 
@@ -537,7 +569,7 @@ h2.selection-name {
   animation-delay: 1s;
 }
 
-@media screen and (max-width: 520px) {
+@media screen and (max-width: 768px) {
   #how-this-works {
     max-height: 200px;
     overflow-y: scroll;

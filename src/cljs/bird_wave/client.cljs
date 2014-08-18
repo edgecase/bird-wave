@@ -349,7 +349,7 @@
         (om/build selection-name model)
         (om/build date-slider model {:state {:time-period-ch time-period-ch}})
         (om/build map-component model)
-        (om/build selection-image (:photo model))
+        (when (= (:screen-size model) "lg") (om/build selection-image (:photo model)))
         (om/build filterlist (:taxonomy model)
                   {:opts {:select-ch species-ch}})))
 
