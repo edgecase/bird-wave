@@ -208,7 +208,8 @@
 
     om/IDidUpdate
     (did-update [_ prev-props prev-state]
-      (init-map "#map svg" model))))
+      (init-map "#map svg" model)
+      (js/setTimeout #(update-map! model) 0))))
 
 
 (defn species-item [model owner]
