@@ -257,6 +257,7 @@ h2.selection-name {
   }
 
   #map svg {
+    -webkit-transform: matrix(0.65,0,0,0.65,-130,-90);
     transform: matrix(0.65,0,0,0.65,-130,-90);
   }
 }
@@ -277,6 +278,7 @@ h2.selection-name {
   }
 
   #map svg {
+    -webkit-transform: matrix(0.4,0,0,0.4,-240,-90);
     transform: matrix(0.4,0,0,0.4,-240,-90);
   }
 }
@@ -298,6 +300,10 @@ h2.selection-name {
   #slider {
     width: 100%;
     text-align: center;
+  }
+
+  #date-select select {
+    -webkit-appearance: menulist;
   }
 }
 
