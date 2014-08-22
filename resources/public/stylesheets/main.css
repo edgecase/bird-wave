@@ -296,7 +296,8 @@ h2.selection-name {
 
 @media screen and (max-width: 768px) {
   #slider {
-    display: none;
+    width: 100%;
+    text-align: center;
   }
 }
 

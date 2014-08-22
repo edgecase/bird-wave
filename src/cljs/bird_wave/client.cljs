@@ -28,6 +28,13 @@
                   :photo {}
                   :screen-size "lg"}))
 
+(defn watch-screen-size [model]
+  (-> js/enquire
+      (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
+      (.register "screen and (min-width: 521px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
+      (.register "screen and (min-width: 769px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
+      (.register "screen and (min-width: 1025px)" #(swap! model assoc :screen-size "lg"))))
+
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period screen-size]} @model
         lg-screen (= screen-size "lg")
@@ -111,6 +118,13 @@
        (filter not-empty)
        (first)))
 
+(defn month-name [time-period]
+  "Returns a funtion which formats the time-period string (YYYY/MM) as a month name"
+  (let [time-bits (cs/split time-period "/")
+        month (js/parseInt (last time-bits))
+        year (js/parseInt (first time-bits))]
+    ((.format (. js/d3 -time) "%B") (js/Date. year (dec month) 1))))
+
 (defn await-taxonomy
   "Return a channel which will receive the value of :taxonomy after it has a non-empty value"
   [model]
@@ -160,6 +174,18 @@
     (did-mount [_]
       (init-axis ".axis"))))
 
+(defn date-select [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:id "slider"}
+       (dom/div #js {:id "date-select"}
+                (dom/label nil "Time period: ")
+                (apply dom/select #js
+                       {:value (:time-period model)
+                        :onChange (fn [e]
+                                    (put! (om/get-state owner :time-period-ch) (.. e -target -value)))}
+                       (map #(dom/option #js {:value %} (month-name %)) dates)))))))
 
 (defn map-component
   "Render container for map which will be controlled by D3.
@@ -347,7 +373,9 @@
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
         (om/build selection-name model)
-        (om/build date-slider model {:state {:time-period-ch time-period-ch}})
+        (if (contains? #{"lg" "md"} (:screen-size model))
+          (om/build date-slider model {:state {:time-period-ch time-period-ch}})
+          (om/build date-select model {:state {:time-period-ch time-period-ch}}))
         (om/build map-component model)
         (when (= (:screen-size model) "lg") (om/build selection-image (:photo model)))
         (om/build filterlist (:taxonomy model)
@@ -356,13 +384,6 @@
     om/IDidMount
     (did-mount [_]
       (get-birds model))))
-
-(defn watch-screen-size [model]
-  (-> js/enquire
-      (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
-      (.register "screen and (min-width: 521px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
-      (.register "screen and (min-width: 769px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
-      (.register "screen and (min-width: 1025px)" #(swap! model assoc :screen-size "lg"))))
 
 (defn open-section []
   (let [section (-> js/d3
