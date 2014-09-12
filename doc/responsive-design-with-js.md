@@ -2,14 +2,14 @@
 
 For a dynamic client-side application, using CSS alone to show and hide
 components for different screen sizes isn't enough. Even when hidden,
-components may be listening for application state and re-rendering themselves,
-taking up resources for no visible effect, giving the perception of a laggy
+components may be listening for application state and re-rendering themselves
+or taking up resources for no visible effect, giving the perception of a laggy
 app. They may be making unnecessary AJAX requests to the server.
 
 ### Screen size as application state
 
 The client environment needs to be aware of the available screen size at a more
-fundamemtal level. In other words, screen size should be part of the
+fundamental level. In other words, screen size should be part of the
 application state. This way, the client can make decisions on whether or not to
 render certain components for a given screen size.
 
@@ -23,8 +23,8 @@ makes it easy to do this, using the
 API and a simple registry/callback pattern that fires for different stages of
 matching a media query. We can use enquirejs callbacks to set the value of a
 `screen-size` variable, which our app can use when deciding whether or not to render a
-component. In ClojureScript (`model` is an atom that is responsible for the
-application state):
+component. In the following ClojureScript example, `model` is an atom that is responsible for the
+application state:
 
 ```clojure
 (defn watch-screen-size [model]
@@ -44,11 +44,11 @@ payloads based on the screen size.
 
 The above code snippet was taken from an app that needs to display an SVG
 county map of the United States using D3 (look
-[here](http://neo.com/2014/04/21/choropleths-and-d3js) for more on that). On
-devices such as tablets or phones, the county map, with over 3000 SVG elements,
-rendered and updated painfully slowly. We used CSS to scale the SVG to fit the
-screen better, but we had to find a quicker, more efficient way to display the
-map details.
+[here](http://neo.com/2014/04/21/choropleths-and-d3js) for more on that). The
+county map contains over 3000 SVG elements, so it rendered and updated
+painfully slowly on devices such as tablets or phones. We used CSS to scale the
+SVG to fit the screen better, but we had to find a quicker, more efficient way
+to display the map details.
 
 Having a handle on the `screen-size` variable allowed us to do that. Instead of
 rendering the county map, we now render a state map for smaller screens. This
