@@ -1,7 +1,7 @@
-(ns bird-man.server
+(ns bird-wave.server
   (:gen-class) ; for -main method in uberjar
   (:require [io.pedestal.service-tools.server :as server]
-            [bird-man.service :as service]
+            [bird-wave.service :as service]
             [io.pedestal.service-tools.dev :as dev]))
 
 (defn run-dev

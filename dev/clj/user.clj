@@ -9,8 +9,8 @@
             [clojure.tools.namespace.repl :refer (refresh refresh-all)]
             [io.pedestal.service-tools.dev :as pedestal-dev]
             [datomic.api :as d :refer (db q)]
-            bird-man.service
-            bird-man.database))
+            bird-wave.service
+            bird-wave.database))
 
 (defonce system (atom nil))
 (defonce config (atom {:env :dev
@@ -37,9 +37,9 @@
 (defn init
   "Creates and initializes the system under development"
   []
-  (bird-man.service/set-env (:env @config))
-  (reset! system (merge (pedestal-dev/init bird-man.service/service #'bird-man.service/routes)
-                        {:db-conn (bird-man.database/init @config)})))
+  (bird-wave.service/set-env (:env @config))
+  (reset! system (merge (pedestal-dev/init bird-wave.service/service #'bird-wave.service/routes)
+                        {:db-conn (bird-wave.database/init @config)})))
 
 (def conn (atom nil))
 
@@ -47,7 +47,7 @@
   "Starts the system running, updates the Var #'system."
   []
   (reset! conn (:db-conn @system))
-  (alter-var-root #'bird-man.service/datomic-connection
+  (alter-var-root #'bird-wave.service/datomic-connection
                   (constantly @conn))
   (pedestal-dev/start))
 

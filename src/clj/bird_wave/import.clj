@@ -1,4 +1,4 @@
-(ns bird-man.import
+(ns bird-wave.import
   (:require [clojure.string :as cs]
             [clojure.java.io :as io]
             [clojure.instant :as inst]

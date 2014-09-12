@@ -1,12 +1,13 @@
-(ns bird-man.map
-  (:require [clojure.string :as cs]))
+(ns bird-wave.map
+  (:require [clojure.string :as cs]
+            [bird-wave.util :refer (analytic-event)]))
 
-(def svg-dim {:width 800 :height 500})
+(def svg-dim {:width 768 :height 500})
 (def key-dim {:width 10 :height 200})
 (def key-bg-dim {:width 45 :height 210})
 (def max-freq 5)
 (def zoom-duration 550)
-(def projection ( -> js/d3 (.geo.albersUsa) (.scale 940) (.translate (array (+ 10 (/ (:width svg-dim) 2)) (/ (:height svg-dim) 2)))))
+(def projection ( -> js/d3 (.geo.albersUsa) (.scale 900) (.translate (array (+ 10 (/ (:width svg-dim) 2)) (/ (:height svg-dim) 2)))))
 (def path ( -> js/d3 (.geo.path) (.projection projection)))
 (def color ( -> js/d3.scale
                 (.quantile)
@@ -14,8 +15,7 @@
                 (.range (-> (aget js/colorbrewer.YlGnBu "9") (.reverse)))))
 (def months ( -> (js/d3.time.scale)
                  (.domain (array (new js/Date 2012 10 15) (new js/Date 2013 10 15)))
-                 (.range (array 0 (- (:width svg-dim) 10)))))
-(def month-axis )
+                 (.range (array 0 (:width svg-dim)))))
 (def key-scale ( -> js/d3.scale
                     (.linear)
                     (.domain (array max-freq 0))
@@ -52,6 +52,9 @@
         translate (array (- (/ width 2) (* scale x)) (- (/ height 2) (* scale y)))]
     {:scale scale :translate translate}))
 
+(defn state-name [el]
+  (aget el "properties" "state"))
+
 (defn init-axis [selector]
   (-> js/d3
       (.select selector)
@@ -80,7 +83,8 @@
             (.duration zoom-duration)
             (.call (.-event (-> zoom
                                 (.translate (:translate zoom-attrs))
-                                (.scale (:scale zoom-attrs))))))))))
+                                (.scale (:scale zoom-attrs))))))
+        (analytic-event {:category "zoom" :action "click-state" :label (state-name state)})))))
 
 (defn prevent-zoom-on-drag []
   (let [e (.-event js/d3)]
@@ -92,27 +96,33 @@
         k-width (:width key-dim)
         k-height (:height key-dim)
         b-width (:width key-bg-dim)
-        b-height (:height key-bg-dim)]
+        b-height (:height key-bg-dim)
+        counties (aget us "objects" "counties")
+        states (aget us "objects" "states")]
+    (-> svg
+        (.selectAll "g.topo")
+        (.remove))
     (-> svg
         (.append "rect")
         (.classed "background" true)
         (.attr "width" s-width)
         (.attr "height" s-height)
         (.on "click" #(reset svg)))
+    (if counties
+      (-> svg
+          (.append "g")
+          (.classed "topo" true)
+          (.selectAll "path")
+          (.data (aget (js/topojson.feature us counties) "features"))
+          (.enter)
+          (.append "path")
+          (.classed "county" true)
+          (.attr "d" path)))
     (-> svg
         (.append "g")
         (.classed "topo" true)
         (.selectAll "path")
-        (.data (aget (js/topojson.feature us (aget us "objects" "counties")) "features"))
-        (.enter)
-        (.append "path")
-        (.classed "county" true)
-        (.attr "d" path))
-    (-> svg
-        (.append "g")
-        (.classed "topo" true)
-        (.selectAll "path")
-        (.data (aget (js/topojson.feature us (aget us "objects" "states")) "features"))
+        (.data (aget (js/topojson.feature us states) "features"))
         (.enter)
         (.append "path")
         (.classed "state" true)
@@ -153,8 +163,8 @@
         (.attr "y" #(key-scale (nth % 1)))
         (.style "fill" #(nth (.range color) %2)))))
 
-(defn draw-map [svg]
-  (js/d3.json "data/us.json"
+(defn draw-map [svg file]
+  (js/d3.json (str "data/" file)
               (fn [us]
                 (aset js/window "mapdata" us)
                 (plot svg us))))
@@ -162,18 +172,31 @@
 (defn init-map [svg-sel model]
   (let [svg (-> js/d3
                 (.select svg-sel)
-                (.on "click" prevent-zoom-on-drag true))]
-    (draw-map svg)))
+                (.on "click" prevent-zoom-on-drag true))
+        data-file (if (= (:screen-size model) "lg") "us.json" "us-states.json")]
+    (draw-map svg data-file)))
 
 (defn build-key [state county]
   (apply str (interpose "-" [state county])))
 
-(defn make-frequencies [stats]
+(defn make-state-frequencies [stats]
+  (into {}
+        (map (fn [s]
+               [(aget s "state")
+                (/ (aget s "total") (aget s "sightings"))])
+             stats)))
+
+(defn make-county-frequencies [stats]
   (into {}
         (map (fn [s]
                [(build-key (aget s "state") (aget s "county"))
                 (/ (aget s "total") (aget s "sightings"))])
              stats)))
+
+(defn make-frequencies [method stats]
+  (case method
+    "state" (make-state-frequencies stats)
+    "county" (make-county-frequencies stats)))
 
 (defn freq-for-county [frequencies data]
   (let [p (aget data "properties")
@@ -183,18 +206,44 @@
         freq (get frequencies keystr)]
   (if freq freq 0.0)))
 
-(defn freq-duration [frequencies]
+(defn freq-for-state [frequencies data]
+  (let [p (aget data "properties")
+        st (str "US-" (aget p "state"))
+        freq (get frequencies st)]
+  (if freq freq 0.0)))
+
+(defn freq-duration-county [frequencies]
   (fn [data]
     (+ (* 100 (freq-for-county frequencies data)) 200)))
 
-(defn freq-color [frequencies]
+(defn freq-color-county [frequencies]
   (fn [data]
     (color (freq-for-county frequencies data))))
+
+(defn freq-duration-state [frequencies]
+  (fn [data]
+    (+ (* 100 (freq-for-state frequencies data)) 200)))
+
+(defn freq-color-state [frequencies]
+  (fn [data]
+    (color (freq-for-state frequencies data))))
 
 (defn update-counties [model]
   ( -> js/d3
        (.selectAll "path.county")
        (.transition)
-       (.duration (freq-duration model))
-       (.style "fill" (freq-color model))
-       (.style "stroke" (freq-color model))))
+       (.duration (freq-duration-county model))
+       (.style "fill" (freq-color-county model))
+       (.style "stroke" (freq-color-county model))))
+
+(defn update-states [model]
+  ( -> js/d3
+       (.selectAll "path.state")
+       (.transition)
+       (.duration (freq-duration-state model))
+       (.style "fill" (freq-color-state model))))
+
+(defn update-map [method model]
+  (case method
+    "state" (update-states model)
+    "county" (update-counties model)))

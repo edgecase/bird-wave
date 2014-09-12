@@ -1,7 +1,7 @@
 (ns user
   (:require [clojure.browser.repl :as repl]))
 
-(aset js/window "__birdman_debug__" true)
+(aset js/window "__birdwave_debug__" true)
 
 (repl/connect "http://localhost:9000/repl")
 

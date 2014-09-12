@@ -1,5 +1,5 @@
-(ns bird-man.database
-  (:require [bird-man.import :as import]
+(ns bird-wave.database
+  (:require [bird-wave.import :as import]
             [datomic.api :as d :refer (db q)]
             [clojure.string :as cs]
             [clojure.set :as cset]

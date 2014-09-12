@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
     <link rel="stylesheet" href="/stylesheets/font-awesome.min.css">
     <!--[if IE 7]>
     <link rel="stylesheet" href="/stylesheets/font-awesome-ie7.min.css">
@@ -31,6 +32,10 @@
     </div>
     <section id="how-this-works" class="closed">
       <h2>How this works <i class="icon-chevron-right"></i></h2>
+      <div class="screen-size-notice">
+        <p><strong>Note:</strong> This app is not optimized for your screen size. For the best experience, use a device that has a width
+        greater than 1024px, like a laptop or larger. </p>
+      </div>
       <p>
       The interactive
       <a href="//en.wikipedia.org/wiki/Choropleth_map" title="wiki:Choropleth Map" target="_blank">choropleth</a>
@@ -47,7 +52,6 @@
       then selectively changes the color of each county to reflect that ratio.
       </p>
       <p>
-      To see the movement of any of the listed birds, .
       You can see the movement of any of the listed birds from month-to-month. Select a bird from the list on the right.
       Type to narrow down the selection, then use arrow keys to select the one you want to see.
       Press Enter to select that bird (or use your mouse to click it).
@@ -56,6 +60,15 @@
       </p>
     </section>
     <script id="client-script"></script>
-    <script> bird_man.client.start(); </script>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-52966727-1', 'auto');
+      ga('send', 'pageview');
+    </script>
+    <script> bird_wave.client.start(); </script>
   </body>
 </html>
