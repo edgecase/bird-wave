@@ -27,12 +27,15 @@ component. In the following ClojureScript example, `model` is an atom that is re
 application state:
 
 ```clojure
+(defn update-size [model new-size]
+  (fn [] (swap! model assoc :screen-size new-size)))
+  
 (defn watch-screen-size [model]
   (-> js/enquire
-      (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
-      (.register "screen and (min-width: 521px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
-      (.register "screen and (min-width: 769px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
-      (.register "screen and (min-width: 1025px)" #(swap! model assoc :screen-size "lg"))))
+      (.register "screen and (min-width: 0px) and (max-width: 520px)"    (update-size "xs"))
+      (.register "screen and (min-width: 521px) and (max-width: 768px)"  (update-size "sm"))
+      (.register "screen and (min-width: 769px) and (max-width: 1024px)" (update-size "md"))
+      (.register "screen and (min-width: 1025px)"                        (update-size "lg"))))
 ```
 
 Now we can check the value of the `screen-size` variable before rendering a
