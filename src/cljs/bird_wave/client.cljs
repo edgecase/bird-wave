@@ -41,10 +41,10 @@
         by (if lg-screen "county" "state")
         url (str "species/" current-taxon "/" time-period "?by=" by)]
     (when (and current-taxon time-period)
-      (js/d3.json url (fn [data]
-                        (om/update! model :frequencies
-                                    (make-frequencies by data))
-                        (update-map by (:frequencies @model)))))))
+      (get-clj url (fn [data]
+                     (om/update! model :frequencies
+                                 (make-frequencies by data))
+                     (update-map by (:frequencies @model)))))))
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model
@@ -90,10 +90,8 @@
                       (om/update! model :attribution (attribution data))))))
 
 (defn get-birds [model]
-  (js/d3.json "species"
-              (fn [species]
-                (let [taxonomy (map keywordize-keys (js->clj species))]
-                  (om/update! model :taxonomy (vec taxonomy))))))
+  (get-clj "/species"
+           #(om/update! model :taxonomy %)))
 
 (defn filter-taxonomy
   "Return a seq of species which partially match the filter-text"
@@ -220,7 +218,7 @@
                                    (if (= model highlighted) " highlighted")
                                    (if (= model selected) " active"))}
         (dom/a #js {:href (taxon-path (:taxon/order model))
-                    :onClick (fn [e] (.preventDefault e) (put! select-ch @model))}
+                    :onClick (fn [e] (.preventDefault e) (put! select-ch model))}
                (display-name model))))
 
     om/IDidUpdate
