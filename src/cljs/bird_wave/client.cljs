@@ -15,7 +15,7 @@
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-map make-frequencies)]
             [bird-wave.flickr :refer (search-query info-query first-photo attribution)]
-            [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event)])
+            [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event get-clj)])
 
   (:import goog.History
            goog.history.EventType))
@@ -406,3 +406,7 @@
 
 (defn ^:export info []
   (log (dissoc @model :taxonomy :frequencies)))
+
+
+(defn ^:export test-transit []
+  (get-clj "/species" #(log "species data" %)))
