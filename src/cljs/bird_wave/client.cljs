@@ -1,15 +1,11 @@
 (ns bird-wave.client
-  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)]
-                   [kioo.om :refer [defsnippet deftemplate]])
+  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)])
   (:require [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
-            [kioo.om :refer [content set-attr set-class do-> substitute listen]]
-            [kioo.core :refer [handle-wrapper]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [goog.events :as events]
-            [ankha.core :as ankha]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
             [bird-wave.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
@@ -133,19 +129,32 @@
         (do (<! (timeout 10))
             (recur))))))
 
-(deftemplate selection-image "templates/selection-image.html" [model owner]
-  {[:#selection-image] (set-class (if (seq model) "loaded" "no-photo"))
-   [:.photo] (set-attr :src (try-with-default model :url_q "/images/loading.png"))
-   [:.title] (content (try-with-default model :title "No photo available"))
-   [:.detail] (if (seq (:attribution model))
-                (do->
-                  (set-attr :href (get-in model [:attribution :url]))
-                  (set-attr :onClick nil)
-                  (set-class "detail fetched")
-                  (content (get-in model [:attribution :by])))
-                (do->
-                  (set-class "detail")
-                  (set-attr :onClick #(fetch-attribution % model))))})
+(defn selection-image [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [has-attribution? (seq (:attribution model))]
+        (dom/div #js {:id "selection-image"
+                      :className (if (seq model) "loaded" "no-photo")}
+          (dom/img #js {:className "photo"
+                        :src (try-with-default model :url_q "/images/loading.png")}
+            (dom/div #js {:className "attribution"}
+              (dom/h3 #js {:className "title"}
+                (try-with-default model :title "No photo available"))
+              (dom/div #js {:className "by"}
+                (dom/span nil "Source: Flickr")
+                (dom/img #js {:className "icon" :src "/images/cc.svg"})
+                (dom/img #js {:className "icon" :src "/images/by.svg"})
+                (dom/br nil)
+                (if (seq (:attribution model))
+                  (dom/a #js {:className "detail fetched"
+                              :href (get-in model [:attribution :url])
+                              :target "_blank"}
+                    (get-in model [:attribution :by]))
+                  (dom/a #js {:className "detail"
+                              :href "#"
+                              :onClick #(fetch-attribution % model)}
+                    "view attribution"))))))))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
