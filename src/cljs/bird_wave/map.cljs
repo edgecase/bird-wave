@@ -180,18 +180,18 @@
   (apply str (interpose "-" [state county])))
 
 (defn make-state-frequencies [stats]
-  (into {}
-        (map (fn [s]
-               [(aget s "state")
-                (/ (aget s "total") (aget s "sightings"))])
-             stats)))
+  (reduce (fn [freqs s]
+            (assoc freqs (:state s)
+                   (/ (:total s) (:sightings s))))
+          {}
+          stats))
 
 (defn make-county-frequencies [stats]
-  (into {}
-        (map (fn [s]
-               [(build-key (aget s "state") (aget s "county"))
-                (/ (aget s "total") (aget s "sightings"))])
-             stats)))
+  (reduce (fn [freqs s]
+            (assoc freqs (build-key (:state s) (:county s))
+                   (/ (:total s) (:sightings s))))
+          {}
+          stats))
 
 (defn make-frequencies [method stats]
   (case method
