@@ -1,21 +1,17 @@
 (ns bird-wave.client
-  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)]
-                   [kioo.om :refer [defsnippet deftemplate]])
+  (:require-macros [cljs.core.async.macros :refer (go go-loop alt!)])
   (:require [clojure.string :as cs]
             [clojure.walk :refer (keywordize-keys)]
             [goog.string.format :as gformat]
-            [kioo.om :refer [content set-attr set-class do-> substitute listen]]
-            [kioo.core :refer [handle-wrapper]]
             [om.core :as om :include-macros true]
             [om.dom :as dom :include-macros true]
             [goog.events :as events]
-            [ankha.core :as ankha]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
             [bird-wave.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
-                                  prevent-zoom-on-drag init-map update-counties make-frequencies)]
+                                  prevent-zoom-on-drag init-map update-map make-frequencies)]
             [bird-wave.flickr :refer (search-query info-query first-photo attribution)]
-            [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event)])
+            [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event get-clj)])
 
   (:import goog.History
            goog.history.EventType))
@@ -25,16 +21,27 @@
                   :time-period nil
                   :taxonomy []
                   :frequencies {}
-                  :photo {}}))
+                  :photo {}
+                  :screen-size "lg"}))
+
+(defn watch-screen-size [model]
+  (let [size-handler (fn [size]  #(swap! model assoc :screen-size size))]
+    (-> js/enquire
+      (.register "screen and (min-width: 0px) and (max-width: 520px)"    (size-handler "xs"))
+      (.register "screen and (min-width: 521px) and (max-width: 768px)"  (size-handler "sm"))
+      (.register "screen and (min-width: 769px) and (max-width: 1024px)" (size-handler "md"))
+      (.register "screen and (min-width: 1025px)"                        (size-handler "lg")))))
 
 (defn update-map! [model]
-  (let [{:keys [current-taxon time-period]} @model
-        url (str "species/" current-taxon "/" time-period)]
+  (let [{:keys [current-taxon time-period screen-size]} @model
+        lg-screen (= screen-size "lg")
+        by (if lg-screen "county" "state")
+        url (str "species/" current-taxon "/" time-period "?by=" by)]
     (when (and current-taxon time-period)
-      (js/d3.json url (fn [data]
-                        (om/update! model :frequencies
-                                    (make-frequencies data))
-                        (update-counties (:frequencies @model)))))))
+      (get-clj url (fn [data]
+                     (om/update! model :frequencies
+                                 (make-frequencies by data))
+                     (update-map by (:frequencies @model)))))))
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model
@@ -80,10 +87,8 @@
                       (om/update! model :attribution (attribution data))))))
 
 (defn get-birds [model]
-  (js/d3.json "species"
-              (fn [species]
-                (let [taxonomy (map keywordize-keys (js->clj species))]
-                  (om/update! model :taxonomy (vec taxonomy))))))
+  (get-clj "/species"
+           #(om/update! model :taxonomy %)))
 
 (defn filter-taxonomy
   "Return a seq of species which partially match the filter-text"
@@ -108,6 +113,13 @@
        (filter not-empty)
        (first)))
 
+(defn month-name [time-period]
+  "Returns a funtion which formats the time-period string (YYYY/MM) as a month name"
+  (let [time-bits (cs/split time-period "/")
+        month (js/parseInt (last time-bits))
+        year (js/parseInt (first time-bits))]
+    ((.format (. js/d3 -time) "%B") (js/Date. year (dec month) 1))))
+
 (defn await-taxonomy
   "Return a channel which will receive the value of :taxonomy after it has a non-empty value"
   [model]
@@ -118,19 +130,32 @@
         (do (<! (timeout 10))
             (recur))))))
 
-(deftemplate selection-image "templates/selection-image.html" [model owner]
-  {[:#selection-image] (set-class (if (seq model) "loaded" "no-photo"))
-   [:.photo] (set-attr :src (try-with-default model :url_q "/images/loading.png"))
-   [:.title] (content (try-with-default model :title "No photo available"))
-   [:.detail] (if (seq (:attribution model))
-                (do->
-                  (set-attr :href (get-in model [:attribution :url]))
-                  (set-attr :onClick nil)
-                  (set-class "detail fetched")
-                  (content (get-in model [:attribution :by])))
-                (do->
-                  (set-class "detail")
-                  (set-attr :onClick #(fetch-attribution % model))))})
+(defn selection-image [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (let [has-attribution? (seq (:attribution model))]
+        (dom/div #js {:id "selection-image"
+                      :className (if (seq model) "loaded" "no-photo")}
+          (dom/img #js {:className "photo"
+                        :src (try-with-default model :url_q "/images/loading.png")}
+            (dom/div #js {:className "attribution"}
+              (dom/h3 #js {:className "title"}
+                (try-with-default model :title "No photo available"))
+              (dom/div #js {:className "by"}
+                (dom/span nil "Source: Flickr")
+                (dom/img #js {:className "icon" :src "/images/cc.svg"})
+                (dom/img #js {:className "icon" :src "/images/by.svg"})
+                (dom/br nil)
+                (if (seq (:attribution model))
+                  (dom/a #js {:className "detail fetched"
+                              :href (get-in model [:attribution :url])
+                              :target "_blank"}
+                    (get-in model [:attribution :by]))
+                  (dom/a #js {:className "detail"
+                              :href "#"
+                              :onClick #(fetch-attribution % model)}
+                    "view attribution"))))))))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
@@ -139,7 +164,6 @@
   (reify
     om/IRender
     (render [_]
-      (log :date-slider)
       (let [val (if-let [date (:time-period model)]
                   (.indexOf dates date)
                   0)]
@@ -158,6 +182,18 @@
     (did-mount [_]
       (init-axis ".axis"))))
 
+(defn date-select [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/div #js {:id "slider"}
+       (dom/div #js {:id "date-select"}
+                (dom/label nil "Time period: ")
+                (apply dom/select #js
+                       {:value (:time-period model)
+                        :onChange (fn [e]
+                                    (put! (om/get-state owner :time-period-ch) (.. e -target -value)))}
+                       (map #(dom/option #js {:value %} (month-name %)) dates)))))))
 
 (defn map-component
   "Render container for map which will be controlled by D3.
@@ -165,7 +201,8 @@
   [model owner]
   (reify
     om/IShouldUpdate
-    (should-update [_ next-props next-state] false)
+    (should-update [_ next-props next-state]
+      (not (= (:screen-size next-props) (:screen-size (om/get-props owner)))))
 
     om/IRender
     (render [_]
@@ -175,8 +212,12 @@
 
     om/IDidMount
     (did-mount [_]
+      (init-map "#map svg" model))
+
+    om/IDidUpdate
+    (did-update [_ prev-props prev-state]
       (init-map "#map svg" model)
-      (get-birds model))))
+      (js/setTimeout #(update-map! model) 0))))
 
 
 (defn species-item [model owner]
@@ -187,7 +228,7 @@
                                    (if (= model highlighted) " highlighted")
                                    (if (= model selected) " active"))}
         (dom/a #js {:href (taxon-path (:taxon/order model))
-                    :onClick (fn [e] (.preventDefault e) (put! select-ch @model))}
+                    :onClick (fn [e] (.preventDefault e) (put! select-ch model))}
                (display-name model))))
 
     om/IDidUpdate
@@ -340,12 +381,18 @@
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build filterlist (:taxonomy model)
-                  {:opts {:select-ch species-ch}})
         (om/build selection-name model)
-        (om/build selection-image (:photo model))
-        (om/build date-slider model {:state {:time-period-ch time-period-ch}})
-        (om/build map-component model)))))
+        (if (contains? #{"lg" "md"} (:screen-size model))
+          (om/build date-slider model {:state {:time-period-ch time-period-ch}})
+          (om/build date-select model {:state {:time-period-ch time-period-ch}}))
+        (om/build map-component model)
+        (when (= (:screen-size model) "lg") (om/build selection-image (:photo model)))
+        (om/build filterlist (:taxonomy model)
+                  {:opts {:select-ch species-ch}})))
+
+    om/IDidMount
+    (did-mount [_]
+      (get-birds model))))
 
 (defn open-section []
   (let [section (-> js/d3
@@ -359,6 +406,7 @@
     (analytic-event {:category "how-this-works" :action "click" :label (if is-open "close" "open")})))
 
 (defn ^:export start []
+  (watch-screen-size model)
   (om/root app model {:target (.getElementById js/document "main")})
   ( -> js/d3
        (.select "#how-this-works h2")
@@ -366,3 +414,7 @@
 
 (defn ^:export info []
   (log (dissoc @model :taxonomy :frequencies)))
+
+
+(defn ^:export test-transit []
+  (get-clj "/species" #(log "species data" %)))

@@ -1,19 +1,22 @@
 (defproject bird-wave "0.1.0-SNAPSHOT"
   :description "Watch bird migrations"
-  :url "http://example.com/FIXME"
+  :url "http://birdwave.neo.com"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.5.1"]
+  :dependencies [[org.clojure/clojure "1.6.0"]
                  [io.pedestal/pedestal.service "0.2.2"]
                  [io.pedestal/pedestal.service-tools "0.2.2"]
-                 [com.datomic/datomic-pro "0.9.4609" :exclusions [org.slf4j/slf4j-nop]]
+                 [com.datomic/datomic-pro "0.9.4815.12"
+                  :exclusions [org.slf4j/slf4j-nop org.slf4j/slf4j-api]]
                  [enlive "1.1.5"]
-                 [org.clojure/clojurescript "0.0-2202"]
-                 [org.clojure/core.async "0.1.301.0-deb34a-alpha"]
-                 [om "0.6.4"]
+                 [com.cognitect/transit-clj "0.8.255"]
+
+                 [org.clojure/clojurescript "0.0-2322"]
+                 [org.clojure/core.async "0.1.338.0-5c5012-alpha"]
+                 [com.cognitect/transit-cljs "0.8.188"]
+                 [om "0.7.3"]
                  [secretary "1.1.0"]
-                 [com.cemerick/url "0.1.1"]
-                 [kioo "0.4.0"]]
+                 [com.cemerick/url "0.1.1"]]
   :plugins      [[lein-cljsbuild "1.0.3"]
                  [datomic-schema-grapher "0.0.1"]
                  [ohpauleez/lein-pedestal "0.1.0-beta10"]]
@@ -33,12 +36,14 @@
                    "vendor/scroll_into_view_polyfill.js"
                    "vendor/d3.v3.js"
                    "vendor/topojson.js"
-                   "vendor/colorbrewer.js"]
+                   "vendor/colorbrewer.js"
+                   "vendor/enquire.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
                   "externs/colorbrewer.js"
-                  "externs/ga.js"]}}
+                  "externs/ga.js"
+                  "externs/enquire.js"]}}
       :advanced
       {:source-paths ["src/cljs"]
        :compiler
@@ -51,12 +56,14 @@
                    "vendor/scroll_into_view_polyfill.js"
                    "vendor/d3.v3.js"
                    "vendor/topojson.js"
-                   "vendor/colorbrewer.js"]
+                   "vendor/colorbrewer.js"
+                   "vendor/enquire.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
                   "externs/colorbrewer.js"
-                  "externs/ga.js"]}}
+                  "externs/ga.js"
+                  "externs/enquire.js"]}}
       :prod
       {:source-paths ["src/cljs"]
        :compiler
@@ -67,12 +74,14 @@
                    "vendor/scroll_into_view_polyfill.js"
                    "vendor/d3.v3.js"
                    "vendor/topojson.js"
-                   "vendor/colorbrewer.js"]
+                   "vendor/colorbrewer.js"
+                   "vendor/enquire.js"]
         :externs ["react/externs/react.js"
                   "externs/d3_externs_min.js"
                   "externs/topojson.js"
                   "externs/colorbrewer.js"
-                  "externs/ga.js"]}}}}
+                  "externs/ga.js"
+                  "externs/enquire.js"]}}}}
 
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
