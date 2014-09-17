@@ -202,15 +202,13 @@
   (let [p (aget data "properties")
         st (str "US-" (aget p "state"))
         cty (first (cs/split (aget p "county") " "))
-        keystr (build-key st cty)
-        freq (get frequencies keystr)]
-  (if freq freq 0.0)))
+        keystr (build-key st cty)]
+    (get frequencies keystr 0.0)))
 
 (defn freq-for-state [frequencies data]
   (let [p (aget data "properties")
-        st (str "US-" (aget p "state"))
-        freq (get frequencies st)]
-  (if freq freq 0.0)))
+        st (str "US-" (aget p "state"))]
+    (get frequencies st 0.0)))
 
 (defn freq-duration-county [frequencies]
   (fn [data]

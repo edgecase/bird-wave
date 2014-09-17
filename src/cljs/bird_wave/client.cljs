@@ -25,11 +25,12 @@
                   :screen-size "lg"}))
 
 (defn watch-screen-size [model]
-  (-> js/enquire
-      (.register "screen and (min-width: 0px) and (max-width: 520px)" #(swap! model assoc :screen-size "xs"))
-      (.register "screen and (min-width: 521px) and (max-width: 768px)" #(swap! model assoc :screen-size "sm"))
-      (.register "screen and (min-width: 769px) and (max-width: 1024px)" #(swap! model assoc :screen-size "md"))
-      (.register "screen and (min-width: 1025px)" #(swap! model assoc :screen-size "lg"))))
+  (let [size-handler (fn [size]  #(swap! model assoc :screen-size size))]
+    (-> js/enquire
+      (.register "screen and (min-width: 0px) and (max-width: 520px)"    (size-handler "xs"))
+      (.register "screen and (min-width: 521px) and (max-width: 768px)"  (size-handler "sm"))
+      (.register "screen and (min-width: 769px) and (max-width: 1024px)" (size-handler "md"))
+      (.register "screen and (min-width: 1025px)"                        (size-handler "lg")))))
 
 (defn update-map! [model]
   (let [{:keys [current-taxon time-period screen-size]} @model
