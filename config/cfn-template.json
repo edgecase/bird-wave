@@ -61,7 +61,7 @@
     "DatomicVersion": {
       "Description" : "Datomic Pro Version for the transactor",
       "Type": "String",
-      "Default": "0.9.4609",
+      "Default": "0.9.4815.12",
       "AllowedPattern" : "[0-9.]*"
     },
     "MyDatomicUserName" : {

@@ -10,7 +10,9 @@
               [ring.util.response :as ring-resp]
               [ring.util.codec :as ring-codec]
               [datomic.api :as d :refer (q db)]
-              [net.cgrand.enlive-html :refer (template deftemplate set-attr)]))
+              [net.cgrand.enlive-html :refer (template deftemplate set-attr)]
+              [cognitect.transit :as transit])
+    (:import (java.io ByteArrayOutputStream)))
 
 (defonce datomic-connection nil)
 (defonce env :dev)
@@ -42,6 +44,24 @@
                 (merge {"Cache-Control" val} headers)))
        response))))
 
+(defn encode-transit
+  [body]
+  (let [out (ByteArrayOutputStream.)
+        writer (transit/writer out :json)]
+    (transit/write writer body)
+    (str out)))
+
+(def transit-body
+  "Encode response body as transit format"
+  (on-response
+   (fn [response]
+     (if (and (coll? (:body response))
+              (empty? (get-in response [:headers "Content-Type"])))
+       (-> response
+           (update-in [:body] encode-transit)
+           (update-in [:headers "Content-Type"] (constantly "application/transit+json")))
+       response))))
+
 (deftemplate home-template "templates/index.html" [env]
   [:#client-script] (set-attr :src (case env
                                      :prod "/javascript/client.js"
@@ -59,6 +79,7 @@
                 [?e :taxon/order _]] db)
          (map first)
          (map (partial d/entity db))
+         (map (partial into {})) ;; convert datomic.EntityMap into regular hash to make transit happy
          (sort-by :taxon/common-name)
          (ring-resp/response))))
 
@@ -112,7 +133,7 @@
      ^:interceptors [(body-params/body-params) datomic-conn bootstrap/html-body]
 
      ["/species" {:get species-index}
-      ^:interceptors [bootstrap/json-body (cache-control 300)]
+      ^:interceptors [transit-body (cache-control 300)]
 
       ["/:taxon/:year-month"
        ^:constraints {:taxon #"\d+\.?\d+":year-month #"\d{4}/\d{2}" :by #"state|county"}

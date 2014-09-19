@@ -1,4 +1,5 @@
-(ns bird-wave.util)
+(ns bird-wave.util
+  (:require [cognitect.transit :as transit]))
 
 (defn log [& args]
   (if js/window.__birdwave_debug__
@@ -33,3 +34,13 @@
          :eventAction action      ;;required
          :eventLabel label
          :eventValue value}))
+
+(defn get-clj
+  "Request some data from the server in transit format."
+  [url callback]
+  (let [reader (transit/reader :json)]
+    (js/d3.xhr url "application/transit+json"
+               (fn [error xhr]
+                 (if error
+                   (log "error requesting" url error)
+                   (callback (transit/read reader (.-response xhr))))))))
