@@ -670,7 +670,7 @@ h2.selection-name {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #bbb;
+  background: transparent;
 
   -webkit-transition: opacity 0.5s;
   -moz-transition: opacity 0.5s;
