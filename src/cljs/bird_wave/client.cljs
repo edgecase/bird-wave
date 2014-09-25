@@ -337,10 +337,15 @@
                           (dom/i #js {:className "icon-chevron-down"})))))))
 
 (defn loading-indicator [model owner]
-  (om/component
-   (dom/p #js {}
-          (when-not (empty? model)
-            "LOADING"))))
+  (let [loading? (not (empty? model))]
+    (om/component
+      (dom/div #js {:className (str "spinner" (when loading? " in"))}
+               (dom/p #js {} "LOADING...")))))
+
+(defn loading-overlay [model owner]
+  (let [loading? (not (empty? model))]
+    (om/component
+      (dom/div #js {:className (str "overlay" (when loading? " in"))}))))
 
 (defn app [model owner]
   (reify
@@ -394,6 +399,7 @@
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
         (om/build selection-name model)
+        (om/build loading-overlay (:loading model))
         (om/build loading-indicator (:loading model))
         (if (contains? #{"lg" "md"} (:screen-size model))
           (om/build date-slider model {:state {:time-period-ch time-period-ch}})
