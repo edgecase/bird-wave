@@ -43,6 +43,7 @@
       (get-clj url (fn [data]
                      (om/update! model :frequencies
                                  (make-frequencies by data))
+                     (om/transact! model :loading #(disj % url))
                      (update-map by (:frequencies @model)))))))
 
 (defn update-photo! [model]
@@ -89,8 +90,12 @@
                       (om/update! model :attribution (attribution data))))))
 
 (defn get-birds [model]
-  (get-clj "/species"
-           #(om/update! model :taxonomy %)))
+  (let [url "/species"]
+    (om/transact! model :loading #(conj % url))
+    (get-clj url
+             (fn [data]
+               (om/transact! model :loading #(disj % url))
+               (om/update! model :taxonomy data)))))
 
 (defn filter-taxonomy
   "Return a seq of species which partially match the filter-text"
