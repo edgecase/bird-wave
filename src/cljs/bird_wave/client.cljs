@@ -340,7 +340,14 @@
   (let [loading? (not (empty? model))]
     (om/component
       (dom/div #js {:className (str "spinner" (when loading? " in"))}
-               (dom/p #js {} "LOADING...")))))
+               (dom/span #js {} "L")
+               (dom/span #js {} "O")
+               (dom/span #js {} "A")
+               (dom/span #js {} "D")
+               (dom/span #js {} "I")
+               (dom/span #js {} "N")
+               (dom/span #js {} "G")
+               (dom/span #js {} "…")))))
 
 (defn loading-overlay [model owner]
   (let [loading? (not (empty? model))]

@@ -715,6 +715,65 @@ h2.selection-name {
   transition: opacity 0.5s;
 }
 
+.spinner span {
+  text-shadow: 0 0 2px #222;
+  -webkit-animation-name: updown;
+  -webkit-animation-duration: 1.0s;
+  -webkit-animation-iteration-count: infinite;
+  -webkit-transform-origin: 0% 100%;
+  -moz-animation-name: updown;
+  -moz-animation-duration: 1.0s;
+  -moz-animation-iteration-count: infinite;
+  -moz-transform-origin: 0% 100%;
+}
+
+.spinner span:nth-of-type(1) {
+  -webkit-animation-delay: 0.1s;
+  -moz-animation-delay: 0.1s;
+}
+.spinner span:nth-of-type(2) {
+  -webkit-animation-delay: 0.2s;
+  -moz-animation-delay: 0.2s;
+}
+.spinner span:nth-of-type(3) {
+  -webkit-animation-delay: 0.3s;
+  -moz-animation-delay: 0.3s;
+}
+.spinner span:nth-of-type(4) {
+  -webkit-animation-delay: 0.4s;
+  -moz-animation-delay: 0.4s;
+}
+.spinner span:nth-of-type(5) {
+  -webkit-animation-delay: 0.5s;
+  -moz-animation-delay: 0.5s;
+}
+.spinner span:nth-of-type(6) {
+  -webkit-animation-delay: 0.6s;
+  -moz-animation-delay: 0.6s;
+}
+.spinner span:nth-of-type(7) {
+  -webkit-animation-delay: 0.7s;
+  -moz-animation-delay: 0.7s;
+}
+
+@-webkit-keyframes updown {
+  0% {
+    -webkit-transform: rotateX(-40deg);
+  }
+  100% {
+    -webkit-transform: rotateX(40deg);
+  }
+}
+
+@-moz-keyframes updown {
+  0% {
+    -moz-transform: rotateX(-40deg);
+  }
+  100% {
+    -moz-transform: rotateX(40deg);
+  }
+}
+
 /* for debugging */
 #inspector {
   background-color: white;
