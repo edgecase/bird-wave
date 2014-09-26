@@ -74,11 +74,9 @@
   (let [{:keys [current-taxon time-period]} @model]
     (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
-(defn selection-name [{:keys [current-name]} owner]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/h2 #js {:className "selection-name"} current-name))))
+(defn selection-name [model owner]
+  (om/component
+    (dom/h2 #js {:className "selection-name"} model)))
 
 (defn fetch-attribution [e model]
   (let [photo-id (:id @model)
@@ -405,7 +403,7 @@
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build selection-name model)
+        (om/build selection-name (:current-name model))
         (om/build loading-overlay (:loading model))
         (om/build loading-indicator (:loading model))
         (if (contains? #{"lg" "md"} (:screen-size model))
