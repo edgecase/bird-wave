@@ -22,6 +22,7 @@
                   :taxonomy []
                   :frequencies {}
                   :photo {}
+                  :loading #{}
                   :screen-size "lg"}))
 
 (defn watch-screen-size [model]
@@ -38,9 +39,11 @@
         by (if lg-screen "county" "state")
         url (str "species/" current-taxon "/" time-period "?by=" by)]
     (when (and current-taxon time-period)
+      (om/transact! model :loading #(conj % url))
       (get-clj url (fn [data]
                      (om/update! model :frequencies
                                  (make-frequencies by data))
+                     (om/transact! model :loading #(disj % url))
                      (update-map by (:frequencies @model)))))))
 
 (defn update-photo! [model]
@@ -71,11 +74,9 @@
   (let [{:keys [current-taxon time-period]} @model]
     (.setToken history (str "/taxon/" current-taxon "/" time-period))))
 
-(defn selection-name [{:keys [current-name]} owner]
-  (reify
-    om/IRender
-    (render [_]
-      (dom/h2 #js {:className "selection-name"} current-name))))
+(defn selection-name [model owner]
+  (om/component
+    (dom/h2 #js {:className "selection-name"} model)))
 
 (defn fetch-attribution [e model]
   (let [photo-id (:id @model)
@@ -87,8 +88,12 @@
                       (om/update! model :attribution (attribution data))))))
 
 (defn get-birds [model]
-  (get-clj "/species"
-           #(om/update! model :taxonomy %)))
+  (let [url "/species"]
+    (om/transact! model :loading #(conj % url))
+    (get-clj url
+             (fn [data]
+               (om/transact! model :loading #(disj % url))
+               (om/update! model :taxonomy data)))))
 
 (defn filter-taxonomy
   "Return a seq of species which partially match the filter-text"
@@ -134,28 +139,27 @@
   (reify
     om/IRender
     (render [_]
-      (let [has-attribution? (seq (:attribution model))]
-        (dom/div #js {:id "selection-image"
-                      :className (if (seq model) "loaded" "no-photo")}
-          (dom/img #js {:className "photo"
-                        :src (try-with-default model :url_q "/images/loading.png")}
+      (dom/div #js {:id "selection-image"
+                    :className (if (seq model) "loaded" "no-photo")}
+         (dom/img #js {:className "photo"
+                       :src (try-with-default model :url_q "/images/loading.png")}
             (dom/div #js {:className "attribution"}
-              (dom/h3 #js {:className "title"}
-                (try-with-default model :title "No photo available"))
-              (dom/div #js {:className "by"}
-                (dom/span nil "Source: Flickr")
-                (dom/img #js {:className "icon" :src "/images/cc.svg"})
-                (dom/img #js {:className "icon" :src "/images/by.svg"})
-                (dom/br nil)
-                (if (seq (:attribution model))
-                  (dom/a #js {:className "detail fetched"
-                              :href (get-in model [:attribution :url])
-                              :target "_blank"}
-                    (get-in model [:attribution :by]))
-                  (dom/a #js {:className "detail"
-                              :href "#"
-                              :onClick #(fetch-attribution % model)}
-                    "view attribution"))))))))))
+               (dom/h3 #js {:className "title"}
+                       (try-with-default model :title "No photo available"))
+               (dom/div #js {:className "by"}
+                  (dom/span nil "Source: Flickr")
+                  (dom/img #js {:className "icon" :src "/images/cc.svg"})
+                  (dom/img #js {:className "icon" :src "/images/by.svg"})
+                  (dom/br nil)
+                  (if (seq (:attribution model))
+                    (dom/a #js {:className "detail fetched"
+                                :href (get-in model [:attribution :url])
+                                :target "_blank"}
+                           (get-in model [:attribution :by]))
+                    (dom/a #js {:className "detail"
+                                :href "#"
+                                :onClick #(fetch-attribution % model)}
+                           "view attribution")))))))))
 
 (def dates #js ["2012/12" "2013/01" "2013/02" "2013/03" "2013/04" "2013/05" "2013/06"
                 "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
@@ -330,6 +334,24 @@
                  (dom/div #js {:className "more"}
                           (dom/i #js {:className "icon-chevron-down"})))))))
 
+(defn loading-indicator [model owner]
+  (let [loading? (not (empty? model))]
+    (om/component
+      (dom/div #js {:className (str "spinner" (when loading? " in"))}
+               (dom/span #js {} "L")
+               (dom/span #js {} "O")
+               (dom/span #js {} "A")
+               (dom/span #js {} "D")
+               (dom/span #js {} "I")
+               (dom/span #js {} "N")
+               (dom/span #js {} "G")
+               (dom/span #js {} "…")))))
+
+(defn loading-overlay [model owner]
+  (let [loading? (not (empty? model))]
+    (om/component
+      (dom/div #js {:className (str "overlay" (when loading? " in"))}))))
+
 (defn app [model owner]
   (reify
     om/IInitState
@@ -381,7 +403,9 @@
     om/IRenderState
     (render-state [_ {:keys [time-period-ch species-ch history-ch]}]
       (dom/div nil
-        (om/build selection-name model)
+        (om/build selection-name (:current-name model))
+        (om/build loading-overlay (:loading model))
+        (om/build loading-indicator (:loading model))
         (if (contains? #{"lg" "md"} (:screen-size model))
           (om/build date-slider model {:state {:time-period-ch time-period-ch}})
           (om/build date-select model {:state {:time-period-ch time-period-ch}}))
