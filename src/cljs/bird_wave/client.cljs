@@ -186,22 +186,34 @@
     (did-mount [_]
       (init-axis ".axis"))))
 
+(defn update-month! [model owner]
+  (let [current-position (.indexOf dates model)
+        next-month (get dates (inc (js/parseInt current-position)))
+        time-period-ch (om/get-state owner :time-period-ch)]
+    (when-not (nil? next-month) (put! time-period-ch next-month))))
+
+(defn date-plus [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/span #js {:className "plus"
+                     :onClick #(update-month! model owner)} "+"))))
+
 (defn date-select [model owner]
   (reify
     om/IRender
     (render [_]
       (dom/div #js {:id "slider"}
-       (dom/div #js {:id "date-select"}
-                (dom/label nil "Time period: ")
-                (apply dom/select #js
-                       {:value (:time-period model)
-                        :onChange (fn [e]
-                                    (put! (om/get-state owner :time-period-ch) (.. e -target -value)))}
-                       (map #(dom/option #js {:value %} (month-name %)) dates)))))))
+        (dom/div #js {:id "date-select"}
+          (dom/label nil "Time period: ")
+          (apply dom/select #js
+                 {:value (:time-period model)
+                  :onChange #(put! (om/get-state owner :time-period-ch) (.. % -target -value))}
+                 (map #(dom/option #js {:value %} (month-name %)) dates)))
+        (om/build date-plus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}})))))
 
 (defn map-component
-  "Render container for map which will be controlled by D3.
-   We override should-update to ensure it is only ever rendered the first time"
+  "Render container for map which will be controlled by D3."
   [model owner]
   (reify
     om/IShouldUpdate
@@ -338,14 +350,14 @@
   (let [loading? (not (empty? model))]
     (om/component
       (dom/div #js {:className (str "spinner" (when loading? " in"))}
-               (dom/span #js {} "L")
-               (dom/span #js {} "O")
-               (dom/span #js {} "A")
-               (dom/span #js {} "D")
-               (dom/span #js {} "I")
-               (dom/span #js {} "N")
-               (dom/span #js {} "G")
-               (dom/span #js {} "…")))))
+               (dom/span nil "L")
+               (dom/span nil "O")
+               (dom/span nil "A")
+               (dom/span nil "D")
+               (dom/span nil "I")
+               (dom/span nil "N")
+               (dom/span nil "G")
+               (dom/span nil "…")))))
 
 (defn loading-overlay [model owner]
   (let [loading? (not (empty? model))]
