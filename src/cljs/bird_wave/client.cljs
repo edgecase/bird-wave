@@ -186,9 +186,9 @@
     (did-mount [_]
       (init-axis ".axis"))))
 
-(defn update-month! [model owner]
+(defn update-month! [model owner func]
   (let [current-position (.indexOf dates model)
-        next-month (get dates (inc (js/parseInt current-position)))
+        next-month (get dates (func (js/parseInt current-position)))
         time-period-ch (om/get-state owner :time-period-ch)]
     (when-not (nil? next-month) (put! time-period-ch next-month))))
 
@@ -196,8 +196,15 @@
   (reify
     om/IRender
     (render [_]
-      (dom/span #js {:className "plus"
-                     :onClick #(update-month! model owner)} "+"))))
+      (dom/span #js {:id "date-plus"
+                     :onClick #(update-month! model owner inc)} "+"))))
+
+(defn date-minus [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (dom/span #js {:id "date-minus"
+                     :onClick #(update-month! model owner dec)} "-"))))
 
 (defn date-select [model owner]
   (reify
@@ -205,12 +212,12 @@
     (render [_]
       (dom/div #js {:id "slider"}
         (dom/div #js {:id "date-select"}
-          (dom/label nil "Time period: ")
+          (om/build date-minus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}})
           (apply dom/select #js
                  {:value (:time-period model)
                   :onChange #(put! (om/get-state owner :time-period-ch) (.. % -target -value))}
-                 (map #(dom/option #js {:value %} (month-name %)) dates)))
-        (om/build date-plus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}})))))
+                 (map #(dom/option #js {:value %} (month-name %)) dates))
+          (om/build date-plus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}}))))))
 
 (defn map-component
   "Render container for map which will be controlled by D3."
