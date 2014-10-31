@@ -11,9 +11,9 @@ Birdwave displays month-to-month changes in the sightings of a selected species
 of bird. Currently, the user can change the selected month in two ways,
 depending on their device size (as noted in [this post](http://www.neo.com/2014/10/03/responsive-javascript-with-enquirejs)).
 On larger screens there's a month slider, and on smaller screens there's a
-select box with the list of available months. It would be nice to have a + and
-- button on either side of the select box for the user to go to the previous or
-next month without having to open the select box each time. This is exactly
+select box with the list of available months. It would be nice to have '+' and
+'-' buttons on either side of the select box for the user to go to the previous
+or next month without having to open the select box each time. This is exactly
 what we'll add in this article.
 
 [Before screenshot]
@@ -50,9 +50,9 @@ The available dates are stored as strings in the format
                 "2013/06" "2013/07" "2013/08" "2013/09" "2013/10" "2013/11"])
 ```
 
-When a user taps on the +, our objective is to take the current date, find the
-next date in the /dates/ vector and push it onto the channel. Similarly, for the
-- button, we find the previous date and push it onto the channel.
+When a user taps on the '+', our objective is to take the current date, find
+the next date in the /dates/ vector and push it onto the channel. Similarly,
+for the '-' button, we find the previous date and push it onto the channel.
 
 ## Implementation
 
