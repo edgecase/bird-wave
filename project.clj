@@ -11,11 +11,11 @@
                  [enlive "1.1.5"]
                  [com.cognitect/transit-clj "0.8.255"]
 
-                 [org.clojure/clojurescript "0.0-2322"]
-                 [org.clojure/core.async "0.1.338.0-5c5012-alpha"]
+                 [org.clojure/clojurescript "0.0-2740"]
+                 [org.clojure/core.async "0.1.346.0-17112a-alpha"]
                  [com.cognitect/transit-cljs "0.8.188"]
-                 [om "0.7.3"]
-                 [secretary "1.1.0"]
+                 [org.omcljs/om "0.8.7" :as om]
+                 [cljsjs/d3 "3.5.3-0"]
                  [com.cemerick/url "0.1.1"]]
   :plugins      [[lein-cljsbuild "1.0.3"]
                  [datomic-schema-grapher "0.0.1"]
@@ -32,15 +32,11 @@
         :source-map "resources/public/javascript/build/client-dev.js.map"
         :optimizations :whitespace
         :pretty-print true
-        :preamble ["react/react.js"
-                   "vendor/scroll_into_view_polyfill.js"
-                   "vendor/d3.v3.js"
+        :preamble ["vendor/scroll_into_view_polyfill.js"
                    "vendor/topojson.js"
                    "vendor/colorbrewer.js"
                    "vendor/enquire.js"]
-        :externs ["react/externs/react.js"
-                  "externs/d3_externs_min.js"
-                  "externs/topojson.js"
+        :externs ["externs/topojson.js"
                   "externs/colorbrewer.js"
                   "externs/ga.js"
                   "externs/enquire.js"]}}
@@ -52,15 +48,11 @@
         :source-map "resources/public/javascript/advanced/client.js.map"
         :optimizations :advanced
         :pretty-print false
-        :preamble ["react/react.min.js"
-                   "vendor/scroll_into_view_polyfill.js"
-                   "vendor/d3.v3.js"
+        :preamble ["vendor/scroll_into_view_polyfill.js"
                    "vendor/topojson.js"
                    "vendor/colorbrewer.js"
                    "vendor/enquire.js"]
-        :externs ["react/externs/react.js"
-                  "externs/d3_externs_min.js"
-                  "externs/topojson.js"
+        :externs ["externs/topojson.js"
                   "externs/colorbrewer.js"
                   "externs/ga.js"
                   "externs/enquire.js"]}}
@@ -70,15 +62,11 @@
        {:output-to "resources/public/javascript/client.js"
         :optimizations :advanced
         :pretty-print false
-        :preamble ["react/react.min.js"
-                   "vendor/scroll_into_view_polyfill.js"
-                   "vendor/d3.v3.js"
+        :preamble ["vendor/scroll_into_view_polyfill.js"
                    "vendor/topojson.js"
                    "vendor/colorbrewer.js"
                    "vendor/enquire.js"]
-        :externs ["react/externs/react.js"
-                  "externs/d3_externs_min.js"
-                  "externs/topojson.js"
+        :externs ["externs/topojson.js"
                   "externs/colorbrewer.js"
                   "externs/ga.js"
                   "externs/enquire.js"]}}}}
