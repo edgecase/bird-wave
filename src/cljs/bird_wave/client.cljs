@@ -7,6 +7,7 @@
             [om.dom :as dom :include-macros true]
             [goog.events :as events]
             [cljs.core.async :as async :refer (chan put! <! timeout)]
+            [cljsjs.d3]
             [bird-wave.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
                                   prevent-zoom-on-drag init-map update-map make-frequencies)]

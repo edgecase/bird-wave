@@ -1,5 +1,6 @@
 (ns bird-wave.util
-  (:require [cognitect.transit :as transit]))
+  (:require [cognitect.transit :as transit]
+            [cljsjs.d3]))
 
 (defn log [& args]
   (if js/window.__birdwave_debug__
