@@ -1,6 +1,6 @@
 (ns bird-wave.map
   (:require [clojure.string :as cs]
-            [bird-wave.util :refer (analytic-event)]
+            [bird-wave.util :refer (analytic-event log)]
             [cljsjs.d3]))
 
 (def svg-dim {:width 768 :height 500})
@@ -170,12 +170,21 @@
                 (aset js/window "mapdata" us)
                 (plot svg us))))
 
-(defn init-map [svg-sel model]
-  (let [svg (-> js/d3
-                (.select svg-sel)
-                (.on "click" prevent-zoom-on-drag true))
-        data-file (if (= (:screen-size model) "lg") "us.json" "us-states.json")]
-    (draw-map svg data-file)))
+(defn init-map [screen-size f]
+  (let [data-file (if (= screen-size "lg") "us.json" "us-states.json")]
+    (js/d3.json (str "data/" data-file) 
+                (fn [us]
+                 (f {:states 
+                      (map (fn [features]
+                            {:state (aget features "properties" "state")
+                             :path (path features)})
+                           (aget (js/topojson.feature us (aget us "objects" "states")) "features")) 
+                     :counties
+                      (map (fn [features]
+                            {:state (aget features "properties" "state")
+                             :county (aget features "properties" "county")
+                             :path (path features)})
+                           (aget (js/topojson.feature us (aget us "objects" "counties")) "features"))})))))
 
 (defn build-key [state county]
   (apply str (interpose "-" [state county])))

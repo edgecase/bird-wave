@@ -21,6 +21,8 @@
                   :current-name ""
                   :time-period nil
                   :taxonomy []
+                  :states []
+                  :counties []
                   :frequencies {}
                   :photo {}
                   :loading #{}
@@ -214,34 +216,43 @@
       (dom/div #js {:id "slider"}
         (dom/div #js {:id "date-select"}
           (om/build date-minus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}})
-          (apply dom/select #js
-                 {:value (:time-period model)
-                  :onChange #(put! (om/get-state owner :time-period-ch) (.. % -target -value))}
+          (apply dom/select 
+                 #js {:value (:time-period model)
+                      :onChange #(put! (om/get-state owner :time-period-ch) (.. % -target -value))}
                  (map #(dom/option #js {:value %} (month-name %)) dates))
           (om/build date-plus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}}))))))
+
+(defn map-states-component
+  [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (apply dom/g #js {:className "topo states"}
+             (map (fn [state]
+                    (dom/path #js {:className "state" :d (:path state)}))
+                  model)))))
+
+(defn map-counties-component
+  [model owner]
+  (reify
+    om/IRender
+    (render [_]
+      (apply dom/g #js {:className "topo counties"}
+             (map (fn [county]
+                    (dom/path #js {:className "county" :d (:path county)}))
+                  model)))))
 
 (defn map-component
   "Render container for map which will be controlled by D3."
   [model owner]
   (reify
-    om/IShouldUpdate
-    (should-update [_ next-props next-state]
-      (not (= (:screen-size next-props) (:screen-size (om/get-props owner)))))
-
-    om/IRender
-    (render [_]
+    om/IRenderState
+    (render-state [_ state]
       (dom/div #js {:id "map"}
         (dom/svg #js {:height (:height svg-dim)
-                      :width (:width svg-dim)})))
-
-    om/IDidMount
-    (did-mount [_]
-      (init-map "#map svg" model))
-
-    om/IDidUpdate
-    (did-update [_ prev-props prev-state]
-      (init-map "#map svg" model)
-      (js/setTimeout #(update-map! model) 0))))
+                      :width (:width svg-dim)}
+                 (om/build map-counties-component (:counties model))
+                 (om/build map-states-component (:states model)))))))
 
 
 (defn species-item [model owner]
@@ -436,7 +447,11 @@
 
     om/IDidMount
     (did-mount [_]
-      (get-birds model))))
+      (init-map (:screen-size model) 
+                (fn [map-data]
+                  (om/update! model :counties (:counties map-data))  
+                  (om/update! model :states (:states map-data))))
+      #_(get-birds model))))
 
 (defn open-section []
   (let [section (-> js/d3
