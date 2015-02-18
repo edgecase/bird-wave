@@ -170,88 +170,40 @@
                 (aset js/window "mapdata" us)
                 (plot svg us))))
 
+(defn extract-features [data type]
+  (aget (js/topojson.feature data (aget data "objects" type)) "features"))
+
+(defn feature-info [features]
+  {:state (aget features "properties" "state")
+   :county (aget features "properties" "county")
+   :path (path features)})
+
 (defn init-map [screen-size f]
-  (let [data-file (if (= screen-size "lg") "us.json" "us-states.json")]
-    (js/d3.json (str "data/" data-file) 
+  (let [data-path (if (= screen-size "lg") "data/us.json" "data/us-states.json")]
+    (js/d3.json data-path
                 (fn [us]
-                 (f {:states 
-                      (map (fn [features]
-                            {:state (aget features "properties" "state")
-                             :path (path features)})
-                           (aget (js/topojson.feature us (aget us "objects" "states")) "features")) 
-                     :counties
-                      (map (fn [features]
-                            {:state (aget features "properties" "state")
-                             :county (aget features "properties" "county")
-                             :path (path features)})
-                           (aget (js/topojson.feature us (aget us "objects" "counties")) "features"))})))))
+                  (f {:states (map feature-info (extract-features us "states"))
+                      :counties (map feature-info (extract-features us "counties"))})))))
 
-(defn build-key [state county]
-  (apply str (interpose "-" [state county])))
-
-(defn make-state-frequencies [stats]
-  (reduce (fn [freqs s]
-            (assoc freqs (:state s)
-                   (/ (:total s) (:sightings s))))
-          {}
-          stats))
-
-(defn make-county-frequencies [stats]
+(defn make-frequencies [stats]
   (reduce (fn [freqs s]
             (assoc freqs (build-key (:state s) (:county s))
                    (/ (:total s) (:sightings s))))
           {}
           stats))
 
-(defn make-frequencies [method stats]
-  (case method
-    "state" (make-state-frequencies stats)
-    "county" (make-county-frequencies stats)))
 
-(defn freq-for-county [frequencies data]
-  (let [p (aget data "properties")
-        st (str "US-" (aget p "state"))
-        cty (first (cs/split (aget p "county") " "))
-        keystr (build-key st cty)]
-    (get frequencies keystr 0.0)))
 
-(defn freq-for-state [frequencies data]
-  (let [p (aget data "properties")
-        st (str "US-" (aget p "state"))]
-    (get frequencies st 0.0)))
 
-(defn freq-duration-county [frequencies]
-  (fn [data]
-    (+ (* 100 (freq-for-county frequencies data)) 200)))
 
-(defn freq-color-county [frequencies]
-  (fn [data]
-    (color (freq-for-county frequencies data))))
 
-(defn freq-duration-state [frequencies]
-  (fn [data]
-    (+ (* 100 (freq-for-state frequencies data)) 200)))
 
-(defn freq-color-state [frequencies]
-  (fn [data]
-    (color (freq-for-state frequencies data))))
 
-(defn update-counties [model]
-  ( -> js/d3
-       (.selectAll "path.county")
-       (.transition)
-       (.duration (freq-duration-county model))
-       (.style "fill" (freq-color-county model))
-       (.style "stroke" (freq-color-county model))))
 
-(defn update-states [model]
-  ( -> js/d3
-       (.selectAll "path.state")
-       (.transition)
-       (.duration (freq-duration-state model))
-       (.style "fill" (freq-color-state model))))
 
-(defn update-map [method model]
-  (case method
-    "state" (update-states model)
-    "county" (update-counties model)))
+
+
+
+(defn frequency-style [freq]
+  (let [c (color freq)]
+    #js {:fill c :stroke c}))

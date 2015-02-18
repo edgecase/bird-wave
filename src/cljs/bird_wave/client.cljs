@@ -10,7 +10,7 @@
             [cljsjs.d3]
             [bird-wave.map :refer (init-axis color active-state zoom zoom-duration
                                   svg-dim state-to-activate active-attrs target
-                                  prevent-zoom-on-drag init-map update-map make-frequencies)]
+                                  prevent-zoom-on-drag init-map update-map make-frequencies build-key frequency-style)]
             [bird-wave.flickr :refer (search-query info-query first-photo attribution)]
             [bird-wave.util :refer (log try-with-default lowercase index-of analytic-event get-clj)])
 
@@ -23,7 +23,6 @@
                   :taxonomy []
                   :states []
                   :counties []
-                  :frequencies {}
                   :photo {}
                   :loading #{}
                   :screen-size "lg"}))
@@ -44,10 +43,20 @@
     (when (and current-taxon time-period)
       (om/transact! model :loading #(conj % url))
       (get-clj url (fn [data]
-                     (om/update! model :frequencies
-                                 (make-frequencies by data))
-                     (om/transact! model :loading #(disj % url))
-                     (update-map by (:frequencies @model)))))))
+                     (let [freqs (make-frequencies data)]
+                       (om/transact! model :states
+                                     (fn [states]
+                                       (mapv (fn [state]
+                                               (assoc state :freq
+                                                      (get freqs (build-key (:state state) nil) 0.0)))
+                                             states)))
+                       (om/transact! model :counties
+                                     (fn [counties]
+                                       (mapv (fn [county]
+                                               (assoc county :freq
+                                                      (get freqs (build-key (:state county) (:county county)) 0.0)))
+                                             counties)))
+                       (om/transact! model :loading #(disj % url))))))))
 
 (defn update-photo! [model]
   (let [{:keys [current-name]} @model
@@ -216,7 +225,7 @@
       (dom/div #js {:id "slider"}
         (dom/div #js {:id "date-select"}
           (om/build date-minus (:time-period model) {:state {:time-period-ch (om/get-state owner :time-period-ch)}})
-          (apply dom/select 
+          (apply dom/select
                  #js {:value (:time-period model)
                       :onChange #(put! (om/get-state owner :time-period-ch) (.. % -target -value))}
                  (map #(dom/option #js {:value %} (month-name %)) dates))
@@ -229,7 +238,10 @@
     (render [_]
       (apply dom/g #js {:className "topo states"}
              (map (fn [state]
-                    (dom/path #js {:className "state" :d (:path state)}))
+                    (dom/path
+                     #js {:className "state"
+                          :d (:path state)
+                          :style (frequency-style (:freq state))}))
                   model)))))
 
 (defn map-counties-component
@@ -239,7 +251,10 @@
     (render [_]
       (apply dom/g #js {:className "topo counties"}
              (map (fn [county]
-                    (dom/path #js {:className "county" :d (:path county)}))
+                    (dom/path
+                     #js {:className "county"
+                          :d (:path county)
+                          :style (frequency-style (:freq county))}))
                   model)))))
 
 (defn map-component
@@ -251,8 +266,9 @@
       (dom/div #js {:id "map"}
         (dom/svg #js {:height (:height svg-dim)
                       :width (:width svg-dim)}
-                 (om/build map-counties-component (:counties model))
-                 (om/build map-states-component (:states model)))))))
+
+                 (om/build map-states-component (:states model))
+                 (om/build map-counties-component (:counties model)))))))
 
 
 (defn species-item [model owner]
@@ -447,11 +463,11 @@
 
     om/IDidMount
     (did-mount [_]
-      (init-map (:screen-size model) 
+      (init-map (:screen-size model)
                 (fn [map-data]
-                  (om/update! model :counties (:counties map-data))  
+                  (om/update! model :counties (:counties map-data))
                   (om/update! model :states (:states map-data))))
-      #_(get-birds model))))
+      (get-birds model))))
 
 (defn open-section []
   (let [section (-> js/d3
@@ -472,7 +488,7 @@
        (.on "click" open-section)))
 
 (defn ^:export info []
-  (log (dissoc @model :taxonomy :frequencies)))
+  (log (map :freq (:counties @model))))
 
 
 (defn ^:export test-transit []
