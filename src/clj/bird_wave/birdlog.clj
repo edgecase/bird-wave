@@ -48,7 +48,7 @@
    nil                              ;; "REASON"
    ])
 
-(def fields (remove nil? fields))
+(def fields (remove nil? field-positions))
 
 (defn sighting
   "given a line of text, split on tabs and return the fields we care about
@@ -81,7 +81,7 @@
         )))
 
 (defn ordered-values
-  "return values of fields in column order"
+  "return sighting values in the order they appear in field-positions"
   [sighting]
   (map sighting fields))
 
