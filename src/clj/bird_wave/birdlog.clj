@@ -1,10 +1,11 @@
-(ns bird-wave.import
-  (:require [clojure.string :as cs]
-            [clojure.java.io :as io]
-            [clojure.instant :as inst]
-            [datomic.api :as d]))
+(ns bird-wave.birdlog
+  (:require [cascalog.api :refer :all]
+            [cascalog.logic.ops :as c]
+            [cascalog.more-taps :as taps]
+            [clojure.string :as cs]
+            [clojure.instant :as inst]))
 
-(def fields
+(def field-positions
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
    :taxon/order                     ;; "TAXONOMIC ORDER"
    nil                              ;; "CATEGORY"
@@ -48,6 +49,9 @@
    nil                              ;; "REASON"
    ])
 
+(def fields (concat (remove nil? field-positions)
+                    [:sighting/month-yr]))
+
 (defn sighting
   "given a line of text, split on tabs and return the fields we care about
    (indicated by non-nil presence in fields vector)"
@@ -55,16 +59,8 @@
   (into {}
         (remove nil?
                 (map #(if % [% %2])
-                     fields
+                     field-positions
                      (cs/split plaintext-row #"\t")))))
-
-(defn sighting-seq
-  "Return a lazy sequence of lines from filename, transformed into sighting maps"
-  [filename skip-rows nth-row]
-  (map sighting
-       (take-nth nth-row
-                 (drop (if skip-rows skip-rows 1)
-                       (line-seq (io/reader filename))))))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -86,17 +82,28 @@
         (assoc :sighting/month-yr (format "%tY/%tm" date date))
         )))
 
-(defn split-taxon
-  "return a pair of [taxon sighting] split by their attribute namespace"
+(defn ordered-values
+  "return sighting values in the order they appear in field-positions"
   [sighting]
-  (let [split (group-by (fn [[k v]] (namespace k))
-                        sighting)]
-    [(into {} (get split "taxon"))
-     (into {} (get split "sighting"))]))
+  (map sighting fields))
 
-(defn seed-data
-  "Lazy sequence of lines from file, manipulated into [taxon sighting] pairs"
-  [file skip-rows nth-row]
-  (->> (sighting-seq file skip-rows nth-row)
-       (map coerce-values)
-       (map split-taxon)))
+(defmapop parse-line [line]
+  (ordered-values (coerce-values (sighting line))))
+
+(comment
+  (taps/hfs-delimited "sample_data/out/"
+                      :delimiter ","
+                      :classes false
+                      :write-header? true
+                      :quote true
+                      :sink-template "%s/%s"
+                      :templatefields ["order" "month-yr"])
+
+
+  (?- (hfs-textline "sample_data/out/" :sink-template "%s/%s" :templatefields ["?order" "?month-yr"])
+   (<- [?order ?state ?county ?month-yr ?total]
+       ((hfs-textline "sample_data/birds.txt") ?line)
+       (parse-line ?line :> ?guid ?order ?common-name ?scientific-name ?subspecies-common-name ?subspecies-scientific-name ?count ?state ?state-code ?county ?county-code ?locality ?latitude ?longitude ?date ?month-yr)
+       (c/sum ?count :> ?total)))
+
+  )

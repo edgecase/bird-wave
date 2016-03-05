@@ -1,10 +1,14 @@
-(ns bird-wave.import
-  (:require [clojure.string :as cs]
-            [clojure.java.io :as io]
-            [clojure.instant :as inst]
-            [datomic.api :as d]))
+(ns bird-wave.pigpen
+  (:require [pigpen.core :as pig]
+            [pigpen.fold :as fold]
+            [clojure.string :as cs]
+            [clojure.instant :as inst]))
 
-(def fields
+(defn birds-file
+  [filename]
+  (pig/load-tsv filename))
+
+(def field-positions
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
    :taxon/order                     ;; "TAXONOMIC ORDER"
    nil                              ;; "CATEGORY"
@@ -48,23 +52,17 @@
    nil                              ;; "REASON"
    ])
 
+(def fields (concat (remove nil? field-positions)
+                    [:sighting/month-yr]))
+
 (defn sighting
   "given a line of text, split on tabs and return the fields we care about
    (indicated by non-nil presence in fields vector)"
-  [plaintext-row]
-  (into {}
-        (remove nil?
-                (map #(if % [% %2])
-                     fields
-                     (cs/split plaintext-row #"\t")))))
-
-(defn sighting-seq
-  "Return a lazy sequence of lines from filename, transformed into sighting maps"
-  [filename skip-rows nth-row]
-  (map sighting
-       (take-nth nth-row
-                 (drop (if skip-rows skip-rows 1)
-                       (line-seq (io/reader filename))))))
+  [row]
+  (->> row
+       (map #(if % [% %2]) field-positions)
+       (remove nil?)
+       (into {})))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -86,17 +84,48 @@
         (assoc :sighting/month-yr (format "%tY/%tm" date date))
         )))
 
-(defn split-taxon
-  "return a pair of [taxon sighting] split by their attribute namespace"
-  [sighting]
-  (let [split (group-by (fn [[k v]] (namespace k))
-                        sighting)]
-    [(into {} (get split "taxon"))
-     (into {} (get split "sighting"))]))
+(defn birds-by-us-county
+  [data]
+  (->> data
+       (pig/map
+        (fn [row]
+          (-> row
+              (sighting)
+              (coerce-values))))
+       (pig/group-by (juxt :taxon/order :sighting/month-yr :sighting/state :sighting/county)
+                     {:fold (fold/juxt (fold/count)
+                                       (->> (fold/map :sighting/count) (fold/sum))
+                                       (->> (fold/map :sighting/count) (fold/avg)))})
+       (pig/map flatten)))
 
-(defn seed-data
-  "Lazy sequence of lines from file, manipulated into [taxon sighting] pairs"
-  [file skip-rows nth-row]
-  (->> (sighting-seq file skip-rows nth-row)
-       (map coerce-values)
-       (map split-taxon)))
+(defn species
+  [data]
+  (->> data
+       (pig/map
+        (fn [row]
+          (-> row
+              (sighting)
+              (coerce-values))))
+       (pig/group-by (juxt :taxon/order :taxon/common-name)
+                     {:fold (fold/count)})
+       (pig/map flatten)
+       ;; (pig/filter (fn [x] (< 1 (last x))))
+       ))
+
+(defn transform-birds
+  [input-file output-file]
+  (->> (birds-file input-file)
+       (birds-by-us-county)
+       (pig/store-clj output-file)))
+
+(comment
+
+  (pig/dump (->> "sample_data/birds.txt"
+                 (birds-file)
+                 (birds-by-us-county)))
+
+  (pig/dump (->> "sample_data/birds.txt"
+                 (birds-file)
+                 (species)))
+
+  )
