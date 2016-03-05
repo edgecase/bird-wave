@@ -18,7 +18,8 @@
                  [cljsjs/d3 "3.5.3-0"]
                  [com.cemerick/url "0.1.1"]
                  [cascalog/cascalog-core "3.0.0"]
-                 [cascalog/cascalog-more-taps "3.0.0"]]
+                 [cascalog/cascalog-more-taps "3.0.0"]
+                 [com.netflix.pigpen/pigpen-pig "0.3.2"]]
   :plugins      [[lein-cljsbuild "1.0.3"]
                  [datomic-schema-grapher "0.0.1"]
                  [ohpauleez/lein-pedestal "0.1.0-beta10"]]
@@ -80,6 +81,7 @@
                                   [datomic-schema-grapher "0.0.1"]
                                   [ankha "0.1.1"]
                                   [org.clojure/tools.namespace "0.2.4"]
+                                  [org.apache.pig/pig "0.13.0"]
                                   [org.apache.hadoop/hadoop-core "1.2.1"]]
                    :jvm-opts ["-Xms768m" "-Xmx768m"]
                    :source-paths ["dev/clj"]}}

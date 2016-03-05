@@ -1,9 +1,12 @@
-(ns bird-wave.birdlog
-  (:require [cascalog.api :refer :all]
-            [cascalog.logic.ops :as c]
-            [cascalog.more-taps :as taps]
+(ns bird-wave.pigpen
+  (:require [pigpen.core :as pig]
+            [pigpen.fold :as fold]
             [clojure.string :as cs]
             [clojure.instant :as inst]))
+
+(defn birds-file
+  [filename]
+  (pig/load-tsv filename))
 
 (def field-positions
   [:sighting/guid                   ;; "GLOBAL UNIQUE IDENTIFIER"
@@ -55,12 +58,11 @@
 (defn sighting
   "given a line of text, split on tabs and return the fields we care about
    (indicated by non-nil presence in fields vector)"
-  [plaintext-row]
-  (into {}
-        (remove nil?
-                (map #(if % [% %2])
-                     field-positions
-                     (cs/split plaintext-row #"\t")))))
+  [row]
+  (->> row
+       (map #(if % [% %2]) field-positions)
+       (remove nil?)
+       (into {})))
 
 (defn coerce [m f & [key & keys]]
   (if key
@@ -82,28 +84,48 @@
         (assoc :sighting/month-yr (format "%tY/%tm" date date))
         )))
 
-(defn ordered-values
-  "return sighting values in the order they appear in field-positions"
-  [sighting]
-  (map sighting fields))
+(defn birds-by-us-county
+  [data]
+  (->> data
+       (pig/map
+        (fn [row]
+          (-> row
+              (sighting)
+              (coerce-values))))
+       (pig/group-by (juxt :taxon/order :sighting/month-yr :sighting/state :sighting/county)
+                     {:fold (fold/juxt (fold/count)
+                                       (->> (fold/map :sighting/count) (fold/sum))
+                                       (->> (fold/map :sighting/count) (fold/avg)))})
+       (pig/map flatten)))
 
-(defmapop parse-line [line]
-  (ordered-values (coerce-values (sighting line))))
+(defn species
+  [data]
+  (->> data
+       (pig/map
+        (fn [row]
+          (-> row
+              (sighting)
+              (coerce-values))))
+       (pig/group-by (juxt :taxon/order :taxon/common-name)
+                     {:fold (fold/count)})
+       (pig/map flatten)
+       ;; (pig/filter (fn [x] (< 1 (last x))))
+       ))
+
+(defn transform-birds
+  [input-file output-file]
+  (->> (birds-file input-file)
+       (birds-by-us-county)
+       (pig/store-clj output-file)))
 
 (comment
-  (taps/hfs-delimited "sample_data/out/"
-                      :delimiter ","
-                      :classes false
-                      :write-header? true
-                      :quote true
-                      :sink-template "%s/%s"
-                      :templatefields ["order" "month-yr"])
 
+  (pig/dump (->> "sample_data/birds.txt"
+                 (birds-file)
+                 (birds-by-us-county)))
 
-  (?- (hfs-textline "sample_data/out/" :sink-template "%s/%s" :templatefields ["?order" "?month-yr"])
-   (<- [?order ?state ?county ?month-yr ?total]
-       ((hfs-textline "sample_data/birds.txt") ?line)
-       (parse-line ?line :> ?guid ?order ?common-name ?scientific-name ?subspecies-common-name ?subspecies-scientific-name ?count ?state ?state-code ?county ?county-code ?locality ?latitude ?longitude ?date ?month-yr)
-       (c/sum ?count :> ?total)))
+  (pig/dump (->> "sample_data/birds.txt"
+                 (birds-file)
+                 (species)))
 
   )
